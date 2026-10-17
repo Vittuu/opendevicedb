@@ -1,0 +1,112 @@
+---
+// SPEC R1 "Get started": one card per install route, easiest first, with the official guide
+// or installer. Nothing is flashed from OpenDeviceDB; we link to each project's own tools.
+import type { DeviceRecord, InstallReport, InstallRoute } from "@opendevicedb/core";
+import {
+  sortInstallRoutes, routeTitle, isDangerousRoute, reportsForRoute, summarizeReports,
+  installReportUrl, reportsSearchUrl,
+} from "@opendevicedb/core";
+
+interface Props { record: DeviceRecord; reports: InstallReport[] }
+const { record: r, reports } = Astro.props;
+const routes = sortInstallRoutes(r.install ?? []);
+const projectUrl = (name: string) => r.projects?.find((p) => p.name === name || p.name.split(" (")[0] === name)?.url;
+const DIFFICULTY: Record<InstallRoute["difficulty"], string> = {
+  easy: "No tools, the device stays closed",
+  medium: "Needs a cable or the command line",
+  hard: "Opening, soldering or a programmer",
+};
+const RISK: Record<string, string> = { none: "None", low: "Low", medium: "Medium", high: "High" };
+const REVERSIBLE: Record<string, string> = { yes: "Yes", no: "No", partial: "Partly" };
+const plural = (n: number, w: string) => `${n} ${w}`;
+const cards = routes.map((route) => {
+  const s = summarizeReports(reportsForRoute(reports, r.id, route, routes));
+  return { route, s, danger: isDangerousRoute(route), report: installReportUrl({ id: r.id, route }) };
+});
+---
+<section class="get-started" aria-labelledby="get-started">
+  <h2 id="get-started">Get started</h2>
+  <p class="muted">
+    {routes.length === 1 ? "One known way" : `${routes.length} known ways`} to put open firmware or software on this device, easiest first.
+    Each one links to the project's own instructions.
+  </p>
+  <div class="card checklist">
+    <strong>Before you start</strong>
+    <ul>
+      <li>Back up your data and settings (and the stock firmware, when the guide says how).</li>
+      <li>Check the exact model, hardware revision and firmware version against the guide: a close model may not work.</li>
+      <li>Charge the battery or use a stable power supply; do not unplug during the install.</li>
+    </ul>
+  </div>
+
+  <div class="routes">
+    {cards.map(({ route, s, danger, report }) => (
+      <article class:list={["card", "route", `d-${route.difficulty}`, { danger }]}>
+        <div class="route-head">
+          <h3>{routeTitle(route)}</h3>
+          <span class:list={["badge", `diff-${route.difficulty}`]} title={DIFFICULTY[route.difficulty]}>{route.difficulty[0].toUpperCase() + route.difficulty.slice(1)}</span>
+        </div>
+        <p class="small muted">{DIFFICULTY[route.difficulty]}{projectUrl(route.project) && <> · <a href={projectUrl(route.project)}>{route.project}</a></>}</p>
+        {danger && (
+          <p class="warn" role="note"><strong>Mains voltage.</strong> This device runs on mains power and must be opened: never open it while it is plugged in. For experienced users only.</p>
+        )}
+        <dl class="facts route-facts">
+          {route.tools && route.tools.length > 0 && <><dt>You need</dt><dd>{route.tools.join(", ")}</dd></>}
+          <dt>Device opened</dt><dd>{route.opens_device ? "Yes" : "No"}</dd>
+          {route.brick_risk && <><dt>Brick risk</dt><dd>{RISK[route.brick_risk] ?? route.brick_risk}</dd></>}
+          {route.reversible && <><dt>Reversible</dt><dd>{REVERSIBLE[route.reversible] ?? route.reversible}{route.revert && <> · <a href={route.revert}>back to stock</a></>}</dd></>}
+          {route.firmware_constraints && <><dt>Firmware</dt><dd>{route.firmware_constraints}</dd></>}
+        </dl>
+        {route.notes && <p class="small">{route.notes}</p>}
+        <p class="small reports">
+          {s.total === 0 ? <span class="muted">No install report yet.</span> : (
+            <>
+              <a href={reportsSearchUrl(r.id)}>{plural(s.worked, "worked")}, {plural(s.failed, "failed")}{s.partly ? `, ${s.partly} partly` : ""}</a>
+              {s.latest && <span class="muted"> (latest: {s.latest.result}{s.latest.firmware_before && <>, firmware <code>{s.latest.firmware_before}</code></>}, {s.latest.opened})</span>}
+            </>
+          )}
+          {" · "}<a href={report}>Report how it went</a>
+        </p>
+        <div class="row route-actions">
+          {danger ? (
+            <a href={route.guide}>Official guide</a>
+          ) : route.installer ? (
+            <>
+              <a class="btn primary" href={route.installer}>Open the official installer</a>
+              <a href={route.guide}>Read the guide first</a>
+            </>
+          ) : (
+            <a class="btn primary" href={route.guide}>Follow the official guide</a>
+          )}
+        </div>
+      </article>
+    ))}
+  </div>
+  <p class="small muted">
+    OpenDeviceDB links to each project's own instructions and tools; nothing is flashed from this site.
+    Flashing is at your own risk and may void the warranty.
+    {reports.length > 0 && <> · <a href={reportsSearchUrl(r.id)}>{reports.length} install report{reports.length === 1 ? "" : "s"} for this device</a></>}
+  </p>
+</section>
+
+<style>
+  .get-started { --ok: var(--st-open-firmware); --mid: var(--st-in-progress); --bad: #b91c1c; }
+  @media (prefers-color-scheme: dark) { .get-started { --bad: #f87171; } }
+  .checklist { margin: 12px 0 14px; }
+  .checklist ul { margin: 6px 0 0; padding-left: 1.2em; }
+  .checklist li + li { margin-top: 0.2em; }
+  .routes { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr)); }
+  .route { display: flex; flex-direction: column; gap: 6px; border-left: 4px solid var(--border); min-width: 0; }
+  .route.d-easy { border-left-color: var(--ok); }
+  .route.d-medium { border-left-color: var(--mid); }
+  .route.d-hard, .route.danger { border-left-color: var(--bad); }
+  .route p { margin: 0; }
+  .route-head { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; }
+  .route-head h3 { margin: 0; font-size: 1.05rem; }
+  .badge.diff-easy { --st: var(--ok); }
+  .badge.diff-medium { --st: var(--mid); }
+  .badge.diff-hard { --st: var(--bad); }
+  .route-facts { font-size: 0.93rem; margin: 4px 0; }
+  .warn { border: 1px solid var(--bad); background: color-mix(in srgb, var(--bad) 10%, transparent); border-radius: 8px; padding: 8px 10px; }
+  .route-actions { margin-top: auto; padding-top: 6px; gap: 8px 14px; }
+</style>

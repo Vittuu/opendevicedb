@@ -79,7 +79,9 @@ function normalizeEntry(e: any): IndexEntry {
   return {
     id: e.id, vendor: e.vendor, model: e.model, aliases: e.aliases ?? [], category: e.category,
     status: e.status as Status, sources: e.sources ?? [], identifiers: e.identifiers ?? {},
-    claims: e.claims ?? 0, verified: e.verified ?? false, updated: e.updated ?? "",
+    claims: e.claims ?? 0, verified: e.verified ?? false,
+    ...(["easy", "medium", "hard"].includes(e.install) ? { install: e.install } : {}),
+    updated: e.updated ?? "",
   };
 }
 

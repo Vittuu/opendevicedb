@@ -5,7 +5,7 @@ on:
   schedule:
     - cron: "17 */6 * * *" # expired claims drop off, request 👍 counts refresh
   issues:
-    types: [opened, closed, reopened, edited, deleted] # device requests (wanted.json)
+    types: [opened, closed, reopened, edited, deleted] # device requests (wanted.json), install reports (install-reports.json)
   workflow_dispatch:
 permissions:
   contents: read
@@ -26,7 +26,7 @@ jobs:
       - run: npm run validate
       - run: npm run build -w site
         env:
-          GITHUB_TOKEN: ${{ github.token }} # device requests are read from the issues API
+          GITHUB_TOKEN: ${{ github.token }} # device requests and install reports are read from the issues API (issues: read)
       - uses: actions/configure-pages@v5
       # Same as actions/upload-pages-artifact, minus its dotfile exclusion: the site serves
       # /.well-known/mcp-registry-auth (MCP Registry domain verification).

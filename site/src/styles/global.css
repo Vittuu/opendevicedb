@@ -204,3 +204,8 @@ a.counter:hover { border-color: var(--muted); }
 @media (prefers-color-scheme: dark) {
   .astro-code, .astro-code span { color: var(--shiki-dark) !important; background-color: var(--shiki-dark-bg) !important; }
 }
+
+/* install difficulty hint (directory rows; SPEC R1) */
+.badge.inst-easy { --st: var(--st-open-firmware); }
+.badge.inst-medium { --st: var(--st-in-progress); }
+.badge.inst-hard { --st: var(--muted); }

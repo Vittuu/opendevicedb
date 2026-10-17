@@ -12,11 +12,20 @@ this repository with `npm install` done at its root.
 | tool | use it to |
 |---|---|
 | `lookup_device(id?, vendor?, model?, fcc_id?, usb?, ble_name?, zigbee_model?)` | check one device: full record, effective status, live claims and a one-line recommendation; says explicitly when nothing is known |
-| `search_devices(query, category?, status?, limit?)` | explore: ranked matches over names, aliases and identifiers |
+| `search_devices(query, category?, status?, limit?)` | explore: ranked matches over names, aliases and identifiers (with the easiest `install` difficulty when there is one) |
 | `claim_device(id? \| vendor+model, category?, who, contact, scope, days=30)` | announce you are working on it (max 90 days); creates a stub record if needed |
 | `publish_findings(id, patch, allow_downgrade?, release_claim_of?)` | merge your results into the record (validated, status only moves forward, policy-screened) |
 | `request_device(vendor, model, fcc_id?, usb?, ble_name?, zigbee_model?, goal?)` | your user wants the device but will not reverse engineer it: the existing request to add a 👍 to, or a pre-filled link to a new public GitHub issue they submit themselves (read-only, never posts) |
 | `list_sources()` | imported databases with license, snapshot date and record count, plus the curated count |
+
+**Install routes.** A record may carry `install`: ways to put its open firmware or software on
+the device (method such as `web-serial`, `ota-exploit`, `usb-bootloader`, `pairing`; the
+project's official `guide` and `installer`; `difficulty`; `tools`; `opens_device`,
+`mains_powered`, `brick_risk`, `reversible`/`revert`, `firmware_constraints`). `lookup_device`
+returns them in `record.install` and its recommendation tells the agent to walk the user
+through the easiest one with the official guide (never step by step when a mains-powered device
+must be opened); `search_devices` gives the easiest `difficulty` as `install`; `publish_findings`
+accepts routes in `patch.install`, merged by method + guide. Nothing is flashed or hosted here.
 
 Writes go to `data/devices/<vendor>/<model>.yaml` in the local checkout. The server never
 runs git: each write result names the changed file and gives the next step
@@ -82,7 +91,7 @@ instead of `ODB_REPO`.
 3. **work** — reverse engineer. Never touch Remote ID, geofencing or other safety
    functions; never copy firmware images or vendor code ([POLICY.md](../../POLICY.md)).
 4. **publish** — `publish_findings` with summary, status, interfaces (link your protocol
-   doc as `spec`), projects (your code, hosted elsewhere), verification and
+   doc as `spec`), projects (your code, hosted elsewhere), install routes, verification and
    `provenance.ai_assisted`. Pass `release_claim_of` to end your claim.
 5. **PR** — run the git / `gh pr create` command from the result. Maintainers review.
 

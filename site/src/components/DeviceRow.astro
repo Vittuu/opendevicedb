@@ -8,7 +8,7 @@ const { entry: e } = Astro.props;
 ---
 <div class="dev-row">
   <a class="name" href={deviceUrl(e.id)}>{displayName(e.vendor, e.model)}</a>
-  <span class="row"><StatusBadge status={e.status} />{e.verified && <span class="badge verified">Verified</span>}</span>
+  <span class="row"><StatusBadge status={e.status} />{e.verified && <span class="badge verified">Verified</span>}{e.install && <span class={`badge inst-${e.install}`} title={`Easiest known install route: ${e.install}`}>{e.install === "easy" ? "Easy install" : `Install: ${e.install}`}</span>}</span>
   <span class="meta">
     {e.category} · <span class="mono">{e.id}</span>
     {e.sources.length > 0 && <> · from {e.sources.map(sourceName).join(", ")}</>}

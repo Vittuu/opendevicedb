@@ -4,7 +4,7 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { parseRecordYaml, validate } from "@opendevicedb/core";
 import { LocalBackend, RemoteBackend, backendFromEnv, CACHE_TTL_MS, type FetchLike } from "../src/backend.ts";
-import { lookupDevice, searchDevices, claimDevice, publishFindings, listSources, requestDevice, type Context } from "../src/tools.ts";
+import { lookupDevice, searchDevices, claimDevice, publishFindings, listSources, requestDevice, patchSchema, type Context } from "../src/tools.ts";
 import { makeRepo, SKY, TELLO, ARCHER } from "./fixture.ts";
 
 const TODAY = "2026-10-17";
@@ -54,6 +54,18 @@ test("search ranks by name and filters", withRepo(async (ctx) => {
   assert.equal(r.results[0].id, "ryze/tello");
   const drones: any = await searchDevices(ctx, { query: "", category: "drone" });
   assert.deepEqual(drones.results.map((x: any) => x.id).sort(), ["acme/sky-1", "ryze/tello"]);
+}));
+
+test("lookup returns install routes and points the agent to them; search gives the easiest difficulty", withRepo(async (ctx) => {
+  const r: any = await lookupDevice(ctx, { id: ARCHER.id });
+  assert.deepEqual(r.record.install, ARCHER.install);
+  assert.match(r.recommendation, /1 install route is listed under `install` \(easiest: easy\): walk the user through the easiest one using its official guide/);
+  assert.match(r.recommendation, /brick_risk/);
+  assert.doesNotMatch(r.recommendation, /mains-powered/);
+  assert.doesNotMatch((await lookupDevice(ctx, { id: TELLO.id }) as any).recommendation, /install route/);
+  const s: any = await searchDevices(ctx, { query: "archer" });
+  assert.equal(s.results[0].install, "easy");
+  assert.equal("install" in (await searchDevices(ctx, { query: "tello" }) as any).results[0], false);
 }));
 
 // ---------- claim_device ----------
@@ -148,6 +160,36 @@ test("publish merges findings, validates and tells the agent to open a PR", with
   assert.equal(rec.identifiers!.fcc_id![0], "2ABCD-SKY1");
 }));
 
+test("publish accepts install routes, merged by method+guide, and warns on mains-powered opening", withRepo(async (ctx, root) => {
+  const serial = { project: "skylib", method: "serial" as const, guide: "https://example.org/skylib/flash", difficulty: "hard" as const, tools: ["USB-serial adapter, 3.3 V"], opens_device: true, brick_risk: "medium" as const };
+  const r1: any = await publishFindings(ctx, { id: SKY.id, patch: { install: [serial] } });
+  assert.equal(r1.ok, true, JSON.stringify(r1));
+  const r2: any = await publishFindings(ctx, { id: SKY.id, patch: { install: [
+    { ...serial, difficulty: "medium", reversible: "yes" },
+    { project: "skylib", method: "web-serial", guide: "https://example.org/skylib/web", installer: "https://example.org/skylib/installer", difficulty: "easy" },
+  ] } });
+  assert.equal(r2.ok, true, JSON.stringify(r2));
+  const rec = parseRecordYaml(read(root, SKY.id));
+  assert.deepEqual(validate(rec), []);
+  assert.equal(rec.install!.length, 2);
+  assert.equal(rec.install!.find((i) => i.method === "serial")!.difficulty, "medium"); // same method+guide: replaced
+  const l: any = await lookupDevice(ctx, { id: SKY.id });
+  assert.match(l.recommendation, /2 install routes are listed under `install` \(easiest: easy\)/);
+
+  await publishFindings(ctx, { id: SKY.id, patch: { install: [{ ...serial, guide: "https://example.org/mains", mains_powered: true }] } });
+  assert.match((await lookupDevice(ctx, { id: SKY.id }) as any).recommendation, /opens a mains-powered device: do not guide it step by step/);
+
+  const bad: any = await publishFindings(ctx, { id: SKY.id, patch: { install: [{ ...serial, method: "telepathy" as any }] } });
+  assert.equal(bad.ok, false);
+  assert.ok(bad.errors.some((e: string) => e.startsWith("/install/0/method")), bad.errors);
+  assert.equal(patchSchema.safeParse({ install: [{ ...serial, method: "telepathy" }] }).success, false);
+  assert.equal(patchSchema.safeParse({ install: [{ ...serial, extra: 1 }] }).success, false);
+  assert.equal(patchSchema.safeParse({ install: [serial] }).success, true);
+  const policy: any = await publishFindings(ctx, { id: SKY.id, patch: { install: [{ ...serial, guide: "https://example.org/x", notes: "this also disables the geofencing" }] } });
+  assert.equal(policy.ok, false);
+  assert.match(policy.error, /POLICY\.md/);
+}));
+
 test("publish returns validation errors and writes nothing", withRepo(async (ctx, root) => {
   const before = read(root, SKY.id);
   const r: any = await publishFindings(ctx, { id: SKY.id, patch: { identifiers: { usb: ["NOT-A-USB-ID"] } } });
@@ -206,7 +248,9 @@ test("remote backend reads the static API through a cached fake fetch", async ()
       sources: r.provenance?.sources ?? [], identifiers: r.identifiers ?? {},
     })),
     "https://odb.test/api/devices/acme/sky-1.json": { ...SKY, claims: [{ who: "zed", contact: "z@x", scope: "control", since: "2026-10-01", expires: "2026-12-01" }] },
+    "https://odb.test/api/devices/tp-link/archer-c7-v5.json": ARCHER,
   };
+  docs["https://odb.test/api/index.json"][2].install = "easy";
   const calls: string[] = [];
   let now = 0;
   const fakeFetch: FetchLike = async (url) => {
@@ -224,7 +268,12 @@ test("remote backend reads the static API through a cached fake fetch", async ()
   assert.equal(r.live_claims.length, 1);
 
   assert.equal((await lookupDevice(ctx, { vendor: "Nobody", model: "Nothing" }) as any).found, false);
-  assert.equal((await searchDevices(ctx, { query: "archer" }) as any).results[0].id, "tp-link/archer-c7-v5");
+  const archer: any = (await searchDevices(ctx, { query: "archer" }) as any).results[0];
+  assert.equal(archer.id, "tp-link/archer-c7-v5");
+  assert.equal(archer.install, "easy");
+  const full: any = await lookupDevice(ctx, { id: ARCHER.id });
+  assert.deepEqual(full.record.install, ARCHER.install);
+  assert.match(full.recommendation, /listed under `install`/);
   assert.equal(calls.filter((u) => u.endsWith("index.json")).length, 1, "index cached");
 
   now += CACHE_TTL_MS + 1;

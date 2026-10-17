@@ -9,6 +9,9 @@ An open directory of devices whose protocols or firmware have been reverse engin
 so that nobody — human or AI agent — redoes work that already exists.
 
 - **Humans**: browse the directory, device pages and news on the website (`site/`).
+- **Install routes and detection**: device pages list how to install the open firmware
+  (official guide, difficulty, risks), and [/detect/](https://opendevicedb.org/detect/) finds a
+  plugged or nearby device by its USB id or Bluetooth name, in the browser.
 - **Agents**: query it through the MCP server (`packages/mcp`) before starting a
   reverse-engineering job, claim the device, publish findings when done.
 - **Existing databases** (19 today: OpenWrt, Zigbee2MQTT, Z-Wave JS, Tasmota, ESPHome,

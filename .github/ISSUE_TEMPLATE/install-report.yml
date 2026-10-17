@@ -1,0 +1,66 @@
+name: Report an install
+description: Say how installing open firmware or software on a device went, so the next person knows what to expect.
+title: "Install report: <device id> (<route>)"
+labels: [install-report]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One issue per attempt, whether it worked or not: failures help as much as successes.
+        Reports are shown next to the install route on the device page on [opendevicedb.org](https://opendevicedb.org/devices/). They never change the record by themselves; a maintainer may use yours to mark the route as verified by hand.
+        This issue is public: do not paste serial numbers, MAC addresses, keys, passwords or Wi-Fi details.
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      description: The device id (e.g. `spotify/car-thing`) or the URL of its page on opendevicedb.org.
+      placeholder: https://opendevicedb.org/devices/spotify/car-thing/
+    validations:
+      required: true
+  - type: dropdown
+    id: route
+    attributes:
+      label: Install route
+      description: How you installed it (the route shown on the device page).
+      options:
+        - host-software — software on a computer or phone, nothing flashed
+        - pairing — pair with a hub, nothing flashed
+        - web-serial — browser installer over USB
+        - ota-exploit — over the air, device stays closed
+        - vendor-upload — upload in the stock web interface
+        - usb-bootloader — USB bootloader (fastboot, DFU, burn mode)
+        - sd-card — firmware file on an SD card
+        - serial — serial / UART, device opened
+        - spi-programmer — flash chip programmer
+        - other
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware version before
+      description: The stock firmware version on the device before you started, if you know it.
+      placeholder: "2.1.4"
+  - type: input
+    id: project
+    attributes:
+      label: Project and version installed
+      description: What you installed, with its version.
+      placeholder: Tasmota 14.2.0
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - worked — it runs as the guide describes
+        - partly — installed, but something does not work
+        - failed — it did not install, or the device stopped working
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything the next person should know (hardware revision, what went wrong, how you recovered, how long it took).

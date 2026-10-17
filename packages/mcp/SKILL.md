@@ -26,7 +26,14 @@ the `opendevicedb` MCP server (tools `lookup_device`, `search_devices`, `claim_d
      engineer it themselves, give them the `request.url` (to add a 👍 to the existing request)
      or the `request_url` (a pre-filled public GitHub issue they review and submit), or call
      `request_device`. Never submit a request yourself.
-3. If you are going to work on it, call `claim_device` (who = the user, contact, a precise
+3. If the user wants to **install** open firmware or software on it, read the record's
+   `install` routes (official `guide`, `installer`, `difficulty`, `tools`, safety flags).
+   Walk them through the easiest route that fits, with the project's own guide: check
+   `firmware_constraints` against their firmware version, have them back up first, and say
+   plainly the `brick_risk`, whether it is `reversible` (and the `revert` guide), and whether
+   it `opens_device`. Never guide step by step a route that opens a `mains_powered` device:
+   give the official link and a mains-voltage warning. Nothing is flashed from OpenDeviceDB.
+4. If you are going to work on it, call `claim_device` (who = the user, contact, a precise
    scope, days ≤ 90) and give the user the git / `gh pr create` command from the result so
    the claim becomes visible.
 
@@ -47,6 +54,8 @@ Call `publish_findings` with the device `id` and a `patch`:
 - `interfaces`: one per transport, with `status`, honest `confidence` (untested AI work is
   `low` or `medium`) and `spec` = URL of the protocol write-up;
 - `projects`: your code or docs, hosted elsewhere under an open license;
+- `install`: install routes you used or confirmed (project, method, official guide URL,
+  difficulty, safety flags); merged by method + guide;
 - `verification`: `hardware-replay` only if a replayable test ran on the real device (give
   the firmware version);
 - `provenance`: `ai_assisted: true` and the tools used;

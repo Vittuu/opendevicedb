@@ -187,3 +187,5 @@ export function search(entries: IndexEntry[], query: string, f: SearchFilters = 
 }
 
 export * from "./wanted.ts";
+export * from "./reports.ts";
+export * from "./detect.ts";

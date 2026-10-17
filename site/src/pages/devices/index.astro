@@ -11,6 +11,8 @@ const first = index.slice(0, PAGE);
 const pages = Math.max(1, Math.ceil(index.length / PAGE));
 const statusCounts = new Map(facet("status"));
 const names = Object.fromEntries([...sources].map(([id, s]) => [id, s.name]));
+const installable = index.filter((e) => e.install).length;
+const easy = index.filter((e) => e.install === "easy").length;
 ---
 <Base title="Devices" description="Search every device known to OpenDeviceDB by name, alias, FCC ID, USB vid:pid, BLE name or chip.">
   <h1>Devices</h1>
@@ -45,6 +47,14 @@ const names = Object.fromEntries([...sources].map(([id, s]) => [id, s.name]));
           {sourceFacet().map(([s, n]) => <option value={s}>{sourceName(s)} ({n.toLocaleString("en")})</option>)}
         </select>
       </div>
+      <div>
+        <label for="install">Install</label>
+        <select id="install" name="install">
+          <option value="">Any</option>
+          <option value="easy">Easy to install ({easy.toLocaleString("en")})</option>
+          <option value="any">Has an install guide ({installable.toLocaleString("en")})</option>
+        </select>
+      </div>
     </form>
     <noscript><p class="muted small">Search and filters need JavaScript. Without it, the full list is in <a href="/api/index.json">/api/index.json</a>.</p></noscript>
     <div class="results-bar">
@@ -67,4 +77,14 @@ const names = Object.fromEntries([...sources].map(([id, s]) => [id, s.name]));
   <script>
     import "../../scripts/directory.ts";
   </script>
+  <style>
+    @media (min-width: 720px) {
+      #directory .filters { grid-template-columns: repeat(4, 1fr); }
+      #directory .filters > :first-child { grid-column: 1 / -1; }
+    }
+    @media (min-width: 1024px) {
+      #directory .filters { grid-template-columns: 2fr repeat(4, 1fr); }
+      #directory .filters > :first-child { grid-column: auto; }
+    }
+  </style>
 </Base>

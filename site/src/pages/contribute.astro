@@ -6,7 +6,7 @@ import Base from "../layouts/Base.astro";
 import StatusBadge from "../components/StatusBadge.astro";
 import { ROOT } from "../lib/data.ts";
 import { REPO_URL, STATUS_HELP } from "../lib/config.ts";
-import { STATUSES, wantedIssueUrl } from "@opendevicedb/core";
+import { STATUSES, wantedIssueUrl, ODB_REPO_URL, REPORT_TEMPLATE } from "@opendevicedb/core";
 
 const example = readFileSync(join(ROOT, "data/devices/ryze/tello.yaml"), "utf8");
 const claimExample = `claims:
@@ -31,6 +31,21 @@ const partialExample = `interfaces:
       Commands go to characteristic 0000ffe1 (service 0000ffe0), 7-byte frames
       starting 0x7e, ending 0xef; byte 3 = brightness 0-100. Seen in captures,
       not replayed yet.`;
+const installExample = `install:
+  - project: Tasmota
+    method: web-serial          # pairing, ota-exploit, vendor-upload, usb-bootloader, sd-card, serial, spi-programmer…
+    guide: https://tasmota.github.io/docs/Getting-Started/
+    installer: https://tasmota.github.io/install/
+    difficulty: medium          # easy: no tools, stays closed · medium: cable or command line · hard: opening, soldering
+    tools: [USB cable]
+    opens_device: false
+    mains_powered: false
+    brick_risk: low             # none, low, medium, high
+    reversible: partial         # yes, no, partial
+    revert: https://example.org/back-to-stock
+    firmware_constraints: Units sold after mid-2023 ship another chip and cannot be flashed this way
+    notes: Hold the button while plugging in the cable.`;
+const reportFormUrl = `${ODB_REPO_URL}/issues/new?template=${REPORT_TEMPLATE}`;
 const themes = { light: "github-light", dark: "github-dark" } as const;
 ---
 <Base title="Contribute" description="How to add or improve a device record, claim a device you are working on, and how verification works.">
@@ -91,6 +106,25 @@ const themes = { light: "github-light", dark: "github-dark" } as const;
       (at least <StatusBadge status="partial-protocol" />) reaches the directory.
     </p>
     <p>Requests are public GitHub issues and follow the <a href="/policy/">content policy</a>. Agents use the <code>request_device</code> tool, which only builds the link: the person opens it.</p>
+
+    <h2 id="install">Install routes and reports</h2>
+    <p>
+      A record can list the ways to put its open firmware or software on the device, under <code>install</code>.
+      Device pages show them as a "Get started" block, easiest first, with the official guide or installer.
+      A route always points to the project's own instructions (<code>guide</code> is required): nothing is flashed
+      or hosted here. Set the safety flags honestly; a device that is mains-powered and must be opened only gets a
+      warning and a plain link to the guide.
+    </p>
+    <Code code={installExample} lang="yaml" themes={themes} />
+    <p class="small muted">The values above are an illustration of the format, not a real device's route.</p>
+    <p>
+      Tried a route? <a href={reportFormUrl}>Report how it went</a> — worked, partly or failed, with the firmware
+      version you started from and the project version you installed. Device pages have a "Report how it went" link
+      on each route that fills in the device and route for you. Reports are public GitHub issues labelled
+      <code>install-report</code>; the site counts them per route ("3 worked, 1 failed") and publishes them in
+      <a href="/api/install-reports.json"><code>/api/install-reports.json</code></a>. They never change a record:
+      a maintainer may turn a report into a <code>manual</code> verification entry by hand.
+    </p>
 
     <h2 id="verification">Verification levels</h2>
     <p>

@@ -2,9 +2,11 @@
 import type { DeviceRecord } from "@opendevicedb/core";
 import Base from "../../../layouts/Base.astro";
 import StatusBadge from "../../../components/StatusBadge.astro";
+import GetStarted from "../../../components/GetStarted.astro";
 import { db, effectiveStatus, liveClaims, editUrl, jsonUrl } from "../../../lib/data.ts";
 import { STATUS_HELP, displayName } from "../../../lib/config.ts";
 import { wantedById } from "../../../lib/wanted.ts";
+import { reportsFor } from "../../../lib/reports.ts";
 import { statusRank, wantedIssueUrl } from "@opendevicedb/core";
 
 export function getStaticPaths() {
@@ -33,6 +35,7 @@ const isUrl = (s: string) => /^https?:\/\//.test(s);
 // Requests only matter while nothing usable exists yet.
 const wantedOpen = statusRank(status) < statusRank("partial-protocol");
 const request = wantedOpen ? (await wantedById()).get(r.id) : undefined;
+const installReports = r.install?.length ? await reportsFor(r.id) : [];
 const requestUrl = wantedIssueUrl({ vendor: r.vendor, model: r.model, identifiers: Object.values(r.identifiers ?? {}).flat().slice(0, 4) as string[] });
 // Search-friendly title: what people look for is "<device> open firmware / custom firmware / API".
 const lead = (kinds: string[]) => (r.projects ?? []).find((p) => kinds.includes(p.kind))?.name.split(" (")[0];
@@ -65,6 +68,8 @@ const desc = r.summary ?? `${displayName(r.vendor, r.model)} (${r.category}): ${
   </div>
 
   {r.summary && <p class="prose" style="font-size:1.05rem">{r.summary}</p>}
+
+  {r.install && r.install.length > 0 && <GetStarted record={r} reports={installReports} />}
 
   <dl class="facts card" style="margin-top:18px">
     <dt>ID</dt><dd class="mono">{r.id}</dd>

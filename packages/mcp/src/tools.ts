@@ -6,7 +6,7 @@ import { z } from "zod";
 import {
   SCHEMA, STATUSES, curatedPath, effectiveStatus, liveClaims, lookup, makeId, mergeRecords,
   parseRecordYaml, search, stringifyRecordYaml, today, validate,
-  matchWanted, wantedIssueUrl, wantedToIndexEntry, statusRank,
+  matchWanted, wantedIssueUrl, wantedToIndexEntry, statusRank, easiestInstall,
   type Claim, type DeviceRecord, type LookupQuery, type Status, type WantedEntry,
 } from "@opendevicedb/core";
 import type { Backend } from "./backend.ts";
@@ -20,6 +20,7 @@ export const CATEGORIES: string[] = P.category.enum;
 const IFACE = P.interfaces.items.properties;
 const PROJ = P.projects.items.properties;
 const VERIF = P.verification.items.properties;
+const INSTALL = P.install.items.properties;
 const FIELD_ORDER = Object.keys(P);
 
 const ID_RE = new RegExp(P.id.pattern);
@@ -115,6 +116,17 @@ const POLICY_REMINDERS: Record<string, string> = {
   appliance: "never bypass door locks, thermal cut-outs or other safety interlocks (mains voltage; microwave capacitors stay lethal unplugged)",
 };
 
+/** SPEC R1: tell the agent how to use the install routes of a record. */
+function installPointer(r: DeviceRecord): string {
+  const routes = r.install!;
+  const risky = routes.some((i) => i.opens_device && i.mains_powered);
+  return `${routes.length} install route${routes.length === 1 ? " is" : "s are"} listed under \`install\` (easiest: ${easiestInstall(r)}): ` +
+    "walk the user through the easiest one using its official guide (and installer when there is one), after checking " +
+    "firmware_constraints against their firmware version; warn about brick_risk, about routes that open the device or are not " +
+    "reversible, and to back up first." +
+    (risky ? " A route opens a mains-powered device: do not guide it step by step, give the official link with a mains-voltage warning." : "");
+}
+
 export function recommend(r: DeviceRecord, on: string): string {
   const live = liveClaims(r, on);
   const status = effectiveStatus(r, on);
@@ -145,6 +157,7 @@ export function recommend(r: DeviceRecord, on: string): string {
       ? `Support is maintained upstream (${upstream.join(", ")}): check its page for your exact hardware revision.`
       : "Not verified on hardware: treat it as a lead and confirm with a replay test.");
   }
+  if (r.install?.length) parts.push(installPointer(r));
   if (POLICY_REMINDERS[r.category]) parts.push(`Policy: ${POLICY_REMINDERS[r.category]} (POLICY.md).`);
   return parts.join(" ");
 }
@@ -173,10 +186,11 @@ export async function searchDevices(ctx: Context, a: { query: string; category?:
     results: hits.map((h) => ({
       id: h.id, vendor: h.vendor, model: h.model, aliases: h.aliases, category: h.category, status: h.status,
       sources: h.sources, live_claims: h.claims, verified: h.verified, score: h.score,
+      ...(h.install ? { install: h.install } : {}),
     })),
     ...(requests.length ? { requests } : {}),
     hint: hits.length
-      ? "Call lookup_device with the id for the full record, live claims and a recommendation."
+      ? "Call lookup_device with the id for the full record, live claims and a recommendation. `install` (when present) is the difficulty of the easiest install route; lookup_device lists the routes."
       : "No match. Try lookup_device with an identifier (FCC id, USB vid:pid, BLE name, Zigbee model). If nothing is known, call claim_device before you start reverse engineering" +
         (requests.length ? "; `requests` lists devices people asked for but nobody has published yet." : ", or request_device if your user only wants it to exist."),
   };
@@ -338,7 +352,7 @@ export async function claimDevice(ctx: Context, a: ClaimArgs): Promise<Result> {
 
 // ---------- publish_findings ----------
 
-const PATCHABLE = ["summary", "status", "interfaces", "projects", "identifiers", "verification", "provenance", "aliases", "vendor_support"] as const;
+const PATCHABLE = ["summary", "status", "interfaces", "projects", "install", "identifiers", "verification", "provenance", "aliases", "vendor_support"] as const;
 
 export const patchSchema = z.strictObject({
   summary: z.string().optional().describe("One plain-text paragraph: what the device is and what is now known. Replaces the current summary."),
@@ -368,6 +382,21 @@ export const patchSchema = z.strictObject({
     license: z.string().optional(),
     official: z.boolean().optional(),
   })).optional().describe("Your code or docs (open license, hosted elsewhere); merged by url."),
+  install: z.array(z.strictObject({
+    project: z.string().describe("Name of the project (in `projects`) this route installs."),
+    method: en(INSTALL.method.enum).describe("web-serial = browser installer, ota-exploit (e.g. cloudcutter), vendor-upload (stock web UI accepts the image), usb-bootloader (fastboot/DFU), sd-card, serial (UART, device opened), spi-programmer, pairing (no flashing), host-software."),
+    guide: z.string().describe("URL of the project's official step-by-step guide."),
+    installer: z.string().optional().describe("URL of the official installer tool, when one exists."),
+    difficulty: en(INSTALL.difficulty.enum).describe("easy = no tools, device stays closed; medium = cable or command line; hard = opening, soldering, programmer."),
+    tools: z.array(z.string()).optional().describe("What to have, e.g. [\"USB-serial adapter, 3.3 V\"]."),
+    opens_device: z.boolean().optional(),
+    mains_powered: z.boolean().optional(),
+    brick_risk: en(INSTALL.brick_risk.enum).optional(),
+    reversible: en(INSTALL.reversible.enum).optional(),
+    revert: z.string().optional().describe("URL of the back-to-stock guide."),
+    firmware_constraints: z.string().optional().describe("e.g. \"stock firmware after 2.x is patched: does not work\"."),
+    notes: z.string().optional(),
+  })).optional().describe("Ways to install the open firmware or software, linking to the project's own guide (nothing is hosted here); merged by method+guide (yours replace)."),
   verification: z.array(z.strictObject({
     method: en(VERIF.method.enum).describe("hardware-replay = replayable test run on a real device; this is what earns the verified badge."),
     by: z.string(),
@@ -407,6 +436,7 @@ export async function publishFindings(ctx: Context, a: { id: string; patch: Patc
     ["summary", patch.summary],
     ...(patch.interfaces ?? []).flatMap((i: any, n: number) => [[`interfaces[${n}].name`, i?.name], [`interfaces[${n}].notes`, i?.notes]] as [string, string][]),
     ...(patch.projects ?? []).map((p: any, n: number) => [`projects[${n}].name`, p?.name] as [string, string]),
+    ...(patch.install ?? []).flatMap((i: any, n: number) => [[`install[${n}].notes`, i?.notes], [`install[${n}].firmware_constraints`, i?.firmware_constraints]] as [string, string][]),
     ...(patch.verification ?? []).map((v: any, n: number) => [`verification[${n}].notes`, v?.notes] as [string, string]),
   ]);
   if (hits.length) return policyRefusal(hits, root);
@@ -561,6 +591,7 @@ export const TOOLS: ToolDef[] = [
       "It tells you whether the protocol or a free firmware already exists, whether someone is working on it right now (live claims), " +
       "and gives a one-line recommendation (e.g. \"open firmware exists: use X\", \"claimed by Y until Z: contact them\"). " +
       "Give identifiers when you have them (FCC id, USB vid:pid, BLE name, Zigbee model): they match better than names. " +
+      "The record's `install` routes (when present) say how to put the open firmware on the device: official guide, installer, difficulty, safety flags. " +
       "If it answers found: false, nothing is known: call claim_device before starting.",
     shape: lookupShape,
     run: lookupDevice,
@@ -590,7 +621,7 @@ export const TOOLS: ToolDef[] = [
     title: "Publish what you found",
     description:
       "CALL THIS WHEN YOU FINISH (or stop) a reverse-engineering job, even with partial results. Merges your findings into the record: " +
-      "summary and status replace (status only moves forward), interfaces merge by transport+name (yours replace), projects by url, " +
+      "summary and status replace (status only moves forward), interfaces merge by transport+name (yours replace), projects by url, install routes by method+guide, " +
       "identifiers and aliases are unioned, verification is appended. The result is validated against the schema; nothing is written on error. " +
       "Link to your protocol docs/code hosted elsewhere; never include firmware images, vendor code, keys, or anything defeating Remote ID, " +
       "geofencing or other safety functions (POLICY.md). Set provenance.ai_assisted honestly. Then open a pull request — the result gives the commands.",

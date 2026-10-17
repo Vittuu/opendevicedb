@@ -24,6 +24,7 @@ const mostWanted = (await openWanted()).slice(0, 5);
       <input id="home-q" name="q" type="search" placeholder="Model, vendor, FCC ID, USB vid:pid…" autocomplete="off" spellcheck="false" />
       <button class="btn primary" type="submit">Search</button>
     </form>
+    <p class="row"><a class="btn" href="/detect/">Detect my device</a> <span class="small muted">Device at hand? Plug it in over USB or find it over Bluetooth: Chrome or Edge, nothing leaves your browser.</span></p>
     <p class="small muted">Try <a href="/devices/?q=framework">framework</a>, <a href="/devices/?q=pixel">pixel</a>, <a href="/devices/?q=tello">tello</a>, <a href="/devices/?q=car+thing">car thing</a>, or browse <a href="/devices/">all devices</a>.</p>
     <p class="small"><a href={REPO_URL}>Open source on GitHub</a>: a ⭐ helps people with the same devices find it.</p>
   </section>

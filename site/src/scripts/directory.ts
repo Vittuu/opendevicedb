@@ -12,6 +12,7 @@ const qEl = form.querySelector<HTMLInputElement>("#q")!;
 const catEl = form.querySelector<HTMLSelectElement>("#category")!;
 const stEl = form.querySelector<HTMLSelectElement>("#status")!;
 const srcEl = form.querySelector<HTMLSelectElement>("#source")!;
+const instEl = form.querySelector<HTMLSelectElement>("#install")!;
 const list = root.querySelector<HTMLElement>("#results")!;
 const count = root.querySelector<HTMLElement>("#count")!;
 const pager = root.querySelector<HTMLElement>("#pager")!;
@@ -47,6 +48,8 @@ function load(): Promise<IndexEntry[]> {
   return loading;
 }
 
+const INSTALL_LABEL: Record<string, string> = { easy: "Easy install", medium: "Install: medium", hard: "Install: hard" };
+
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 
 const wantedBadge = (w: WantedEntry) =>
@@ -63,8 +66,9 @@ function row(e: IndexEntry): string {
   const src = e.sources.length ? ` · from ${esc(e.sources.map((s) => sourceNames[s] ?? s).join(", "))}` : "";
   const claims = e.claims ? ` · ${e.claims} live claim${e.claims > 1 ? "s" : ""}` : "";
   const verified = e.verified ? `<span class="badge verified">Verified</span>` : "";
+  const install = e.install ? `<span class="badge inst-${e.install}" title="Easiest known install route: ${e.install}">${INSTALL_LABEL[e.install]}</span>` : "";
   return `<li><div class="dev-row"><a class="name" href="${href}">${esc(displayName(e.vendor, e.model))}</a>` +
-    `<span class="row"><span class="badge s-${e.status}">${STATUS_LABEL[e.status] ?? e.status}</span>${verified}${w && e.status !== "partial-protocol" && e.status !== "controllable" && e.status !== "open-firmware" ? wantedBadge(w) : ""}</span>` +
+    `<span class="row"><span class="badge s-${e.status}">${STATUS_LABEL[e.status] ?? e.status}</span>${verified}${install}${w && e.status !== "partial-protocol" && e.status !== "controllable" && e.status !== "open-firmware" ? wantedBadge(w) : ""}</span>` +
     `<span class="meta">${esc(e.category)} · <span class="mono">${esc(e.id)}</span>${src}${claims}</span></div></li>`;
 }
 
@@ -83,6 +87,7 @@ function syncUrl() {
   if (catEl.value) p.set("category", catEl.value);
   if (stEl.value) p.set("status", stEl.value);
   if (srcEl.value) p.set("source", srcEl.value);
+  if (instEl.value) p.set("install", instEl.value);
   if (page > 1) p.set("page", String(page));
   const qs = p.toString();
   history.replaceState(null, "", qs ? `?${qs}` : location.pathname);
@@ -90,7 +95,10 @@ function syncUrl() {
 
 function render() {
   if (!index) return;
-  const pool = srcEl.value ? index.filter((e) => e.sources.includes(srcEl.value)) : index;
+  const inst = instEl.value;
+  const pool = srcEl.value || inst
+    ? index.filter((e) => (!srcEl.value || e.sources.includes(srcEl.value)) && (!inst || (inst === "any" ? !!e.install : e.install === inst)))
+    : index;
   const hits = search(pool, qEl.value, {
     category: catEl.value || undefined,
     status: (stEl.value || undefined) as IndexEntry["status"] | undefined,
@@ -126,7 +134,7 @@ function update(resetPage = true) {
 
 form.addEventListener("submit", (ev) => { ev.preventDefault(); update(); });
 qEl.addEventListener("input", () => update());
-for (const el of [catEl, stEl, srcEl]) el.addEventListener("change", () => update());
+for (const el of [catEl, stEl, srcEl, instEl]) el.addEventListener("change", () => update());
 qEl.addEventListener("focus", () => { load().catch(() => {}); }, { once: true });
 pager.addEventListener("click", (ev) => {
   const b = (ev.target as HTMLElement).closest<HTMLButtonElement>("button[data-go]");
@@ -139,6 +147,6 @@ pager.addEventListener("click", (ev) => {
 // Restore state from the URL (links from the home page, category links on device pages).
 const params = new URLSearchParams(location.search);
 const setIf = (el: HTMLInputElement | HTMLSelectElement, k: string) => { const v = params.get(k); if (v !== null) el.value = v; };
-setIf(qEl, "q"); setIf(catEl, "category"); setIf(stEl, "status"); setIf(srcEl, "source");
+setIf(qEl, "q"); setIf(catEl, "category"); setIf(stEl, "status"); setIf(srcEl, "source"); setIf(instEl, "install");
 page = Math.max(1, Number(params.get("page")) || 1);
 if ([...params.keys()].length) update(false);
