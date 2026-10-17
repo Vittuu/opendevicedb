@@ -67,6 +67,30 @@
         }
       }
     },
+    "install": {
+      "type": "array",
+      "description": "Ways to put the open firmware or software on the device (R1). Links go to the project's own guide and installer; nothing is flashed from OpenDeviceDB.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["project", "method", "guide", "difficulty"],
+        "properties": {
+          "project": { "type": "string", "description": "name of the project this route installs" },
+          "method": { "enum": ["host-software", "pairing", "web-serial", "ota-exploit", "vendor-upload", "usb-bootloader", "sd-card", "serial", "spi-programmer", "other"] },
+          "guide": { "type": "string", "format": "uri", "description": "official step-by-step guide" },
+          "installer": { "type": "string", "format": "uri", "description": "official installer tool, when one exists" },
+          "difficulty": { "enum": ["easy", "medium", "hard"] },
+          "tools": { "type": "array", "items": { "type": "string" } },
+          "opens_device": { "type": "boolean" },
+          "mains_powered": { "type": "boolean" },
+          "brick_risk": { "enum": ["none", "low", "medium", "high"] },
+          "reversible": { "enum": ["yes", "no", "partial"] },
+          "revert": { "type": "string", "format": "uri", "description": "guide to go back to the stock firmware" },
+          "firmware_constraints": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
     "claims": {
       "type": "array",
       "items": {

@@ -9,6 +9,25 @@ export interface Claim { who: string; contact: string; scope: string; since: str
 export interface Project { name: string; url: string; kind: string; license?: string; official?: boolean }
 export interface Interface { name: string; transport: string; status: string; confidence?: string; spec?: string; notes?: string }
 export interface Verification { method: string; by: string; date: string; firmware?: string; notes?: string }
+export type InstallMethod =
+  | "host-software" | "pairing" | "web-serial" | "ota-exploit" | "vendor-upload"
+  | "usb-bootloader" | "sd-card" | "serial" | "spi-programmer" | "other";
+/** One way to put the open firmware or software on a device (SPEC R1). */
+export interface InstallRoute {
+  project: string;
+  method: InstallMethod;
+  guide: string;
+  installer?: string;
+  difficulty: "easy" | "medium" | "hard";
+  tools?: string[];
+  opens_device?: boolean;
+  mains_powered?: boolean;
+  brick_risk?: "none" | "low" | "medium" | "high";
+  reversible?: "yes" | "no" | "partial";
+  revert?: string;
+  firmware_constraints?: string;
+  notes?: string;
+}
 
 export interface DeviceRecord {
   id: string;
@@ -22,6 +41,7 @@ export interface DeviceRecord {
   vendor_support?: string;
   interfaces?: Interface[];
   projects?: Project[];
+  install?: InstallRoute[];
   claims?: Claim[];
   verification?: Verification[];
   provenance?: { sources?: string[]; ai_assisted?: boolean; tools?: string[] };
@@ -86,7 +106,16 @@ export interface IndexEntry {
   identifiers: NonNullable<DeviceRecord["identifiers"]>;
   claims: number;
   verified: boolean;
+  /** Difficulty of the easiest install route, when the record has any (SPEC R1). */
+  install?: InstallRoute["difficulty"];
   updated: string;
+}
+
+const DIFFICULTY = ["easy", "medium", "hard"] as const;
+/** Difficulty of the easiest route, or undefined when there is none. */
+export function easiestInstall(r: Pick<DeviceRecord, "install">): InstallRoute["difficulty"] | undefined {
+  const d = (r.install ?? []).map((i) => DIFFICULTY.indexOf(i.difficulty)).filter((n) => n >= 0);
+  return d.length ? DIFFICULTY[Math.min(...d)] : undefined;
 }
 
 export function toIndexEntry(r: DeviceRecord, on = today()): IndexEntry {
@@ -101,6 +130,7 @@ export function toIndexEntry(r: DeviceRecord, on = today()): IndexEntry {
     identifiers: r.identifiers ?? {},
     claims: liveClaims(r, on).length,
     verified: (r.verification ?? []).some((v) => v.method === "hardware-replay"),
+    ...(easiestInstall(r) ? { install: easiestInstall(r) } : {}),
     updated: r.updated,
   };
 }

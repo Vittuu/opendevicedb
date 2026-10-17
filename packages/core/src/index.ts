@@ -102,6 +102,7 @@ export function mergeRecords(a: DeviceRecord, b: DeviceRecord): DeviceRecord {
     summary: a.summary ?? b.summary,
     interfaces: uniqBy([...(a.interfaces ?? []), ...(b.interfaces ?? [])], (i) => `${i.transport}:${i.name}`),
     projects: uniqBy([...(a.projects ?? []), ...(b.projects ?? [])], (p) => p.url),
+    install: uniqBy([...(a.install ?? []), ...(b.install ?? [])], (i) => `${i.method}:${i.guide}`),
     claims: uniqBy([...(a.claims ?? []), ...(b.claims ?? [])], (c) => `${c.who}:${c.since}:${c.scope}`),
     verification: [...(a.verification ?? []), ...(b.verification ?? [])],
     provenance: {
