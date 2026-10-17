@@ -135,15 +135,7 @@ Accounts, comments, a write API, hosting of binaries, automatic verification.
 
 ## Roadmap (ideas, to be specified before any code)
 
-- **R1 — Guided installer.** From a device page, walk a non-developer through putting the
-  open firmware or software on it. Reuse each project's own installer rather than writing a
-  flasher: ESP Web Tools (WebSerial, in the browser) for ESPHome, Tasmota and OpenBeken,
-  tuya-cloudcutter for Tuya devices over the air, the OpenWrt Firmware Selector, the
-  LineageOS and postmarketOS install guides, Valetudo… Records would gain an `install`
-  block: method, official installer URL, difficulty, tools needed, bricking risk, how to go
-  back to stock. First step is data plus guide pages; in-browser flashing only where the
-  upstream installer already supports it. No guided flashing of mains-powered appliances
-  that must be opened. (Owner, 2026-10-17; also asked for in comments on the launch post.)
+- **R1 — Guided installer.** Specified below (agreed with the owner on 2026-10-17).
 - **R2 — Preserving open binaries (BitTorrent).** Keep open builds available when a
   project's download server disappears. Limits from P5: only binaries whose licence allows
   redistribution, never vendor images; GPL binaries travel with their corresponding source;
@@ -151,3 +143,58 @@ Accounts, comments, a write API, hosting of binaries, automatic verification.
   upstream at capture time, plus the magnet link. Existing archives come first (Internet
   Archive for binaries, Software Heritage for source). Needs a legal review before
   anything is seeded. (Owner, 2026-10-17.)
+
+## R1 — Guided installer (agreed 2026-10-17, not built yet)
+
+**Goal.** On a device page, someone who does not code sees in 30 seconds whether there is a
+way to put open firmware or software on it, what it takes, what can go wrong, and which
+official guide or installer to follow. We link to each project's own tools; nothing is
+flashed from opendevicedb.org.
+
+**Data: `install` routes.** A record gains an `install` list; a device can have several
+routes (e.g. cloudcutter over the air, or serial flashing). Each route:
+
+| field | meaning |
+|---|---|
+| `project` | name of the project in `projects` this route installs |
+| `method` | `web-serial` (browser installer), `ota-exploit` (e.g. cloudcutter), `vendor-upload` (stock web UI accepts the image, e.g. OpenWrt factory image), `usb-bootloader` (fastboot/DFU, phones), `sd-card` (3D printers), `serial` (UART, device opened), `spi-programmer`, `pairing` (no flashing: Zigbee/Z-Wave/BLE pairing) |
+| `guide` | URL of the official step-by-step guide (required) |
+| `installer` | URL of the official installer tool, when one exists (web.esphome.io, Tasmota web installer, OpenWrt Firmware Selector…) |
+| `difficulty` | `easy` (no tools, device stays closed), `medium` (cable or command line), `hard` (opening, soldering, programmer) |
+| `tools` | what to buy or have (e.g. "USB-serial adapter, 3.3 V") |
+| `opens_device`, `mains_powered` | safety flags |
+| `brick_risk` | `low` / `medium` / `high` |
+| `reversible` | `yes` / `no` / `partial`, with `revert` = URL of the back-to-stock guide |
+| `firmware_constraints` | e.g. "Tuya firmware patched after 2.x: does not work" |
+
+**Sources.** Both, in parallel: importers fill routes they can derive deterministically
+(LineageOS and postmarketOS per-device install pages, cloudcutter, OpenWrt, Klipper/Marlin
+SD-card flashing, Zigbee2MQTT/Z-Wave JS pairing, Tasmota/ESPHome web installers where the
+source says the device is flashable without opening); curated YAML adds or corrects routes
+for popular and most-requested devices.
+
+**Site.** A "Get started" block on the device page: one card per route (difficulty, time,
+tools, risk, reversible), a checklist (back up first, battery charged, exact model and
+firmware version checked), and a button to the official guide or installer. Mains-powered
+devices that must be opened get a warning and a plain link, never a guided flow. Same data
+in `/api/devices/<id>.json`, and `lookup_device` returns it so an agent can walk a user
+through it.
+
+**Install reports.** A GitHub issue form `install-report.yml` (device id, route, firmware
+version before, project version, result `worked` / `failed` / `partly`, notes), label
+`install-report`. Like requests, the site fetches them at build time and shows per route
+"N worked, M failed (latest: firmware X)". Maintainers can turn a report into a `manual`
+verification entry; reports never change a record automatically.
+
+**Device detection (v1).** A "Detect my device" button, run entirely in the browser
+(nothing is sent anywhere; the lookup uses the static index):
+- WebUSB: reads the USB vid:pid of a plugged device (phones in fastboot/ADB mode, cameras,
+  RGB peripherals, printers' boards) and matches `identifiers.usb`;
+- Web Bluetooth: reads the advertised BLE name (watches, bands, lights) and matches
+  `identifiers.ble_names`;
+- WebSerial: only identifies the USB-serial adapter, not the device: the page says so and
+  asks for the label instead.
+Chrome/Edge only; other browsers, routers and network devices fall back to the existing
+label search (model, FCC ID, sku). When several records match, the page lists them.
+
+**Out of R1.** Flashing from our pages, a desktop installer app, hosting binaries (R2).
