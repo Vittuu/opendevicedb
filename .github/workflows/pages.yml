@@ -28,8 +28,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }} # device requests are read from the issues API
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v4
-        with: { path: site/dist }
+      # Same as actions/upload-pages-artifact, minus its dotfile exclusion: the site serves
+      # /.well-known/mcp-registry-auth (MCP Registry domain verification).
+      - name: Package site
+        run: tar --dereference --hard-dereference --directory site/dist -cvf "$RUNNER_TEMP/artifact.tar" --exclude=.git --exclude=.github . > /dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: github-pages
+          path: ${{ runner.temp }}/artifact.tar
+          retention-days: 1
+          if-no-files-found: error
   deploy:
     needs: build
     runs-on: ubuntu-latest
