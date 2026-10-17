@@ -10,7 +10,8 @@ import {
 interface Props { record: DeviceRecord; reports: InstallReport[] }
 const { record: r, reports } = Astro.props;
 const routes = sortInstallRoutes(r.install ?? []);
-const projectUrl = (name: string) => r.projects?.find((p) => p.name === name || p.name.split(" (")[0] === name)?.url;
+const projectUrl = (name: string) =>
+  (r.projects?.find((p) => p.name === name || p.name.split(" (")[0] === name) ?? r.projects?.find((p) => p.name.startsWith(name + " ")))?.url;
 const DIFFICULTY: Record<InstallRoute["difficulty"], string> = {
   easy: "No tools, the device stays closed",
   medium: "Needs a cable or the command line",
