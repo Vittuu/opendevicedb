@@ -34,9 +34,22 @@ const isUrl = (s: string) => /^https?:\/\//.test(s);
 const wantedOpen = statusRank(status) < statusRank("partial-protocol");
 const request = wantedOpen ? (await wantedById()).get(r.id) : undefined;
 const requestUrl = wantedIssueUrl({ vendor: r.vendor, model: r.model, identifiers: Object.values(r.identifiers ?? {}).flat().slice(0, 4) as string[] });
-const desc = r.summary ?? `${r.vendor} ${r.model} (${r.category}): ${STATUS_HELP[status]}`;
+// Search-friendly title: what people look for is "<device> open firmware / custom firmware / API".
+const lead = (kinds: string[]) => (r.projects ?? []).find((p) => kinds.includes(p.kind))?.name.split(" (")[0];
+const fw = lead(["firmware"]), code = lead(["library", "driver", "integration", "sdk", "tool"]);
+const titleTail: Record<string, string> = {
+  "open-firmware": `open firmware${fw ? ` (${fw})` : ""}`,
+  controllable: `open-source control${code ? ` (${code})` : ""}`,
+  "partial-protocol": "partly reverse-engineered protocol",
+  "in-progress": "reverse engineering in progress",
+  unknown: "reverse engineering status",
+};
+const pageTitle = `${displayName(r.vendor, r.model)}: ${titleTail[status] ?? status}`;
+const supportedBy = [...new Set((r.projects ?? []).map((p) => p.name.split(" (")[0]))].slice(0, 3);
+const desc = r.summary ?? `${displayName(r.vendor, r.model)} (${r.category}): ${STATUS_HELP[status]}` +
+  (supportedBy.length ? ` Open projects: ${supportedBy.join(", ")}.` : "");
 ---
-<Base title={displayName(r.vendor, r.model)} description={desc}>
+<Base title={pageTitle} description={desc}>
   <link slot="head" rel="alternate" type="application/json" href={jsonUrl(r.id)} />
   <div class="dev-head">
     <p class="crumbs"><a href="/devices/">Devices</a> / <a href={`/devices/?category=${r.category}`}>{r.category}</a></p>
