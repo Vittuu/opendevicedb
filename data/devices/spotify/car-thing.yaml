@@ -1,0 +1,22 @@
+id: spotify/car-thing
+vendor: Spotify
+model: Car Thing
+category: media-player
+identifiers:
+  chips: [Amlogic S905D2]
+status: open-firmware
+vendor_support: discontinued
+summary: >-
+  In-car controller bricked by Spotify in December 2024. The community can reflash it
+  over USB burn mode and run alternative firmwares turning it into a desk dashboard.
+projects:
+  - name: superbird-tool
+    url: https://github.com/thinglabsoss/superbird-tool
+    kind: tool
+  - name: DeskThing
+    url: https://github.com/ItsRiprod/DeskThing
+    kind: integration
+provenance:
+  sources: [curated]
+  ai_assisted: false
+updated: 2026-10-17

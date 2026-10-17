@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opendevicedb.org/schema/device.schema.json",
+  "title": "OpenDeviceDB device record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "vendor", "model", "category", "status", "updated"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*/[a-z0-9]+(-[a-z0-9]+)*$" },
+    "vendor": { "type": "string", "minLength": 1 },
+    "model": { "type": "string", "minLength": 1 },
+    "aliases": { "type": "array", "items": { "type": "string" }, "default": [] },
+    "category": {
+      "enum": [
+        "drone", "camera", "ip-camera", "action-camera", "router", "smart-plug", "light",
+        "switch", "sensor", "hub", "vacuum-robot", "wearable", "phone", "tablet", "e-reader",
+        "laptop", "single-board", "printer", "3d-printer", "audio", "tv", "media-player",
+        "game-console", "vehicle", "radio", "toy", "appliance", "medical", "other"
+      ]
+    },
+    "identifiers": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fcc_id": { "type": "array", "items": { "type": "string" } },
+        "usb": { "type": "array", "items": { "type": "string", "pattern": "^[0-9a-f]{4}:[0-9a-f]{4}$" } },
+        "ble_names": { "type": "array", "items": { "type": "string" } },
+        "chips": { "type": "array", "items": { "type": "string" } },
+        "sku": { "type": "array", "items": { "type": "string" } },
+        "zigbee_model": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "status": { "enum": ["unknown", "in-progress", "partial-protocol", "controllable", "open-firmware"] },
+    "summary": { "type": "string" },
+    "vendor_support": {
+      "description": "State of the vendor's own service",
+      "enum": ["active", "degraded", "discontinued", "unknown"]
+    },
+    "interfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "transport", "status"],
+        "properties": {
+          "name": { "type": "string" },
+          "transport": { "enum": ["wifi", "ble", "bluetooth", "usb", "uart", "jtag", "swd", "zigbee", "zwave", "thread", "lora", "rf", "ethernet", "can", "cloud-api", "other"] },
+          "status": { "enum": ["unknown", "partial", "documented"] },
+          "confidence": { "enum": ["low", "medium", "high"] },
+          "spec": { "type": "string", "format": "uri" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "url", "kind"],
+        "properties": {
+          "name": { "type": "string" },
+          "url": { "type": "string", "format": "uri" },
+          "kind": { "enum": ["firmware", "sdk", "library", "driver", "protocol-doc", "integration", "tool", "teardown", "other"] },
+          "license": { "type": "string" },
+          "official": { "type": "boolean", "default": false }
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["who", "contact", "scope", "since", "expires"],
+        "properties": {
+          "who": { "type": "string" },
+          "contact": { "type": "string" },
+          "scope": { "type": "string" },
+          "since": { "type": "string", "format": "date" },
+          "expires": { "type": "string", "format": "date" },
+          "agent": { "type": "string", "description": "agent/tool used, e.g. claude-code + rea 6.5.0" }
+        }
+      }
+    },
+    "verification": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["method", "by", "date"],
+        "properties": {
+          "method": { "enum": ["hardware-replay", "manual", "none"] },
+          "by": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "firmware": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sources": { "type": "array", "items": { "type": "string" } },
+        "ai_assisted": { "type": "boolean" },
+        "tools": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "updated": { "type": "string", "format": "date" }
+  }
+}

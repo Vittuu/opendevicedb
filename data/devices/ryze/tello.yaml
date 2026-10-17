@@ -1,0 +1,27 @@
+id: ryze/tello
+vendor: Ryze Tech
+model: Tello
+aliases: [DJI Tello]
+category: drone
+identifiers:
+  ble_names: []
+status: controllable
+vendor_support: degraded
+summary: >-
+  Small Wi-Fi drone with an official text command SDK over UDP. Community libraries
+  also cover the undocumented binary protocol used by the vendor app (video, telemetry).
+interfaces:
+  - name: Tello SDK text commands
+    transport: wifi
+    status: documented
+    confidence: high
+    notes: UDP 8889 commands, 8890 state, 11111 video
+projects:
+  - name: DJITelloPy
+    url: https://github.com/damiafuentes/DJITelloPy
+    kind: library
+    license: MIT
+provenance:
+  sources: [curated]
+  ai_assisted: false
+updated: 2026-10-17

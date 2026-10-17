@@ -1,0 +1,30 @@
+id: pebble/pebble-time
+vendor: Pebble
+model: Pebble Time
+category: wearable
+status: open-firmware
+vendor_support: discontinued
+summary: >-
+  Smartwatch whose vendor shut down in 2016. The Rebble community replaced the cloud
+  services, and the PebbleOS source code was released as open source in 2025.
+interfaces:
+  - name: Pebble Protocol
+    transport: bluetooth
+    status: documented
+    confidence: high
+projects:
+  - name: Rebble
+    url: https://rebble.io
+    kind: integration
+  - name: PebbleOS
+    url: https://github.com/pebble-dev/pebble-firmware
+    kind: firmware
+    license: Apache-2.0
+  - name: Gadgetbridge
+    url: https://gadgetbridge.org
+    kind: integration
+    license: AGPL-3.0
+provenance:
+  sources: [curated]
+  ai_assisted: false
+updated: 2026-10-17
