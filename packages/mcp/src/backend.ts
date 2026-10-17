@@ -110,18 +110,31 @@ export class RemoteBackend implements Backend {
     return value;
   }
 
+  private normalized?: { raw: unknown; entries: IndexEntry[] };
+
   async index(): Promise<IndexEntry[]> {
     const data = await this.getJson("/api/index.json");
     if (!Array.isArray(data)) throw new Error(`${this.location}/api/index.json is missing or not an array`);
-    return data.map(normalizeEntry);
+    // Same entry objects while the download is cached, so core search reuses its per-entry keys.
+    if (this.normalized?.raw !== data) this.normalized = { raw: data, entries: data.map(normalizeEntry) };
+    return this.normalized.entries;
   }
+
+  private slim?: { from: IndexEntry[]; records: DeviceRecord[] };
 
   async records(): Promise<DeviceRecord[]> {
     // Slim records: enough for core lookup (ids, names, identifiers). Full record via get().
-    return (await this.index()).map((e) => ({
-      id: e.id, vendor: e.vendor, model: e.model, aliases: e.aliases, category: e.category,
-      status: e.status, identifiers: e.identifiers, provenance: { sources: e.sources }, updated: e.updated,
-    }));
+    const index = await this.index();
+    if (this.slim?.from !== index) {
+      this.slim = {
+        from: index,
+        records: index.map((e) => ({
+          id: e.id, vendor: e.vendor, model: e.model, aliases: e.aliases, category: e.category,
+          status: e.status, identifiers: e.identifiers, provenance: { sources: e.sources }, updated: e.updated,
+        })),
+      };
+    }
+    return this.slim.records;
   }
 
   async get(id: string): Promise<DeviceRecord | null> {

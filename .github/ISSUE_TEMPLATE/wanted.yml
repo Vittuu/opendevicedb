@@ -45,7 +45,9 @@ body:
         - tablet
         - e-reader
         - laptop
+        - desktop
         - single-board
+        - peripheral
         - printer
         - 3d-printer
         - audio

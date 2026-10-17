@@ -4,9 +4,26 @@ import openwrt from "./sources/openwrt.ts";
 import tasmota from "./sources/tasmota.ts";
 import esphome from "./sources/esphome.ts";
 import thingino from "./sources/thingino.ts";
+import zwaveJs from "./sources/zwave-js.ts";
+import tuyaLocal from "./sources/tuya-local.ts";
+import openrgb from "./sources/openrgb.ts";
+import libgphoto2 from "./sources/libgphoto2.ts";
+import lineageos from "./sources/lineageos.ts";
+import postmarketos from "./sources/postmarketos.ts";
+import coreboot from "./sources/coreboot.ts";
+import rtl433 from "./sources/rtl_433.ts";
+import marlin from "./sources/marlin.ts";
+import klipper from "./sources/klipper.ts";
+import rockbox from "./sources/rockbox.ts";
+import gadgetbridge from "./sources/gadgetbridge.ts";
+import valetudo from "./sources/valetudo.ts";
 import type { Source } from "./lib.ts";
 
 export * from "./lib.ts";
 
 /** Registered sources, in priority order. */
-export const SOURCES: Source[] = [zigbee2mqtt, openwrt, tasmota, esphome, thingino];
+export const SOURCES: Source[] = [
+  zigbee2mqtt, openwrt, tasmota, esphome, thingino,
+  zwaveJs, tuyaLocal, openrgb, libgphoto2, lineageos, postmarketos, coreboot, rtl433, marlin, klipper, rockbox,
+  gadgetbridge, valetudo,
+];

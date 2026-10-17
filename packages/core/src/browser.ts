@@ -110,6 +110,24 @@ export const compact = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 export interface SearchFilters { category?: string; status?: Status; limit?: number }
 
+interface SearchKeys { hay: string; words: Set<string>; ids: string[]; model: string; full: string }
+
+// Normalised search keys, computed once per entry (the index is reused across keystrokes).
+const keyCache = new WeakMap<IndexEntry, SearchKeys>();
+function keys(e: IndexEntry): SearchKeys {
+  let k = keyCache.get(e);
+  if (!k) {
+    const hay = `${norm(`${e.vendor} ${e.model}`)} ${norm(e.aliases.join(" "))}`;
+    k = {
+      hay, words: new Set(hay.split(" ")),
+      ids: Object.values(e.identifiers).flat().map((x) => compact(x!)),
+      model: compact(e.model), full: compact(`${e.vendor}${e.model}`),
+    };
+    keyCache.set(e, k);
+  }
+  return k;
+}
+
 /** Token search over vendor, model, aliases and identifiers. Pure, usable in the browser. */
 export function search(entries: IndexEntry[], query: string, f: SearchFilters = {}): (IndexEntry & { score: number })[] {
   const q = norm(query);
@@ -119,16 +137,14 @@ export function search(entries: IndexEntry[], query: string, f: SearchFilters = 
   for (const e of entries) {
     if (f.category && e.category !== f.category) continue;
     if (f.status && e.status !== f.status) continue;
-    const ids = Object.values(e.identifiers).flat().map((x) => compact(x!));
     if (!tokens.length) { out.push({ ...e, score: 0 }); continue; }
-    const name = norm(`${e.vendor} ${e.model}`);
-    const hay = `${name} ${norm(e.aliases.join(" "))}`;
+    const { hay, words, ids, model, full } = keys(e);
     let score = 0;
     if (qc && ids.includes(qc)) score += 100;
-    if (compact(e.model) === qc || compact(`${e.vendor}${e.model}`) === qc) score += 50;
+    if (model === qc || full === qc) score += 50;
     let all = true;
     for (const t of tokens) {
-      if (hay.split(" ").includes(t)) score += 10;
+      if (words.has(t)) score += 10;
       else if (hay.includes(t) || ids.some((i) => i.includes(t))) score += 4;
       else all = false;
     }

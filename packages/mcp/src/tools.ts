@@ -106,7 +106,14 @@ const stub = (r: Pick<DeviceRecord, "id" | "vendor" | "model" | "category" | "st
 const projectList = (ps: NonNullable<DeviceRecord["projects"]>) =>
   ps.slice(0, 3).map((p) => `${p.name} (${p.url})`).join(", ");
 
-const SENSITIVE_CATEGORIES = ["drone", "vehicle", "medical", "radio"];
+/** Category-specific policy reminders (POLICY.md "Refused"). */
+const POLICY_REMINDERS: Record<string, string> = {
+  drone: "never work on Remote ID, geofencing or other safety/compliance functions",
+  vehicle: "never work on emissions, braking, steering or other safety systems",
+  radio: "never lift radio power or frequency limits",
+  medical: "never bypass medical safety interlocks",
+  appliance: "never bypass door locks, thermal cut-outs or other safety interlocks (mains voltage; microwave capacitors stay lethal unplugged)",
+};
 
 export function recommend(r: DeviceRecord, on: string): string {
   const live = liveClaims(r, on);
@@ -138,7 +145,7 @@ export function recommend(r: DeviceRecord, on: string): string {
       ? `Support is maintained upstream (${upstream.join(", ")}): check its page for your exact hardware revision.`
       : "Not verified on hardware: treat it as a lead and confirm with a replay test.");
   }
-  if (SENSITIVE_CATEGORIES.includes(r.category)) parts.push("Policy: never work on Remote ID, geofencing or other safety/compliance functions (POLICY.md).");
+  if (POLICY_REMINDERS[r.category]) parts.push(`Policy: ${POLICY_REMINDERS[r.category]} (POLICY.md).`);
   return parts.join(" ");
 }
 

@@ -310,3 +310,10 @@ test("requests are optional: no source or a broken one gives []", withRepo(async
   const broken = new RemoteBackend("https://example.test", { fetch: async () => { throw new Error("offline"); } });
   assert.deepEqual(await broken.wanted(), []);
 }));
+
+test("policy screen flags bypassing appliance interlocks, not mentioning them", async () => {
+  const { policyScan } = await import("../src/policy.ts");
+  assert.equal(policyScan([["x", "bypass the door interlock"]]).length, 1);
+  assert.equal(policyScan([["x", "disable the thermal cut-out"]]).length, 1);
+  assert.equal(policyScan([["x", "the interlock is left untouched; door lock state is read over BLE"]]).length, 0);
+});

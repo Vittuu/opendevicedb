@@ -12,7 +12,8 @@ legally sustainable, contributions must respect these rules.
 - Proprietary firmware images, vendor source code, extracted keys, certificates or credentials.
 - Anything whose purpose is to defeat a regulatory safety or compliance function:
   drone Remote ID, geofencing / no-fly enforcement, radio power or frequency limits,
-  vehicle emissions or safety systems, medical device safety interlocks.
+  vehicle emissions or safety systems, medical device safety interlocks,
+  appliance safety interlocks (door locks, thermal cut-outs, microwave interlocks).
 - Ways to access devices or accounts you do not own, or other people's data.
 - Circumvention of DRM for the purpose of copyright infringement.
 

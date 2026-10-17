@@ -7,7 +7,7 @@ import YAML from "yaml";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import SCHEMA_JSON from "../../../schema/device.schema.json" with { type: "json" };
-import { STATUSES, statusRank, makeId, search, toIndexEntry, compact, type Status, type DeviceRecord } from "./browser.ts";
+import { STATUSES, statusRank, makeId, search, toIndexEntry, compact, type Status, type DeviceRecord, type IndexEntry } from "./browser.ts";
 
 export * from "./browser.ts";
 
@@ -125,6 +125,14 @@ export function loadAll(root = REPO_ROOT): DeviceRecord[] {
   return [...byId.values()].sort((x, y) => x.id.localeCompare(y.id));
 }
 
+// One index entry per record object, so repeated lookups reuse core search's per-entry keys.
+const entries = new WeakMap<DeviceRecord, IndexEntry>();
+const entryOf = (r: DeviceRecord): IndexEntry => {
+  let e = entries.get(r);
+  if (!e) entries.set(r, (e = toIndexEntry(r)));
+  return e;
+};
+
 export interface LookupQuery { vendor?: string; model?: string; fcc_id?: string; usb?: string; ble_name?: string; zigbee_model?: string }
 
 /** Best single match for a device description, or null. Identifiers beat names. */
@@ -142,7 +150,7 @@ export function lookup(records: DeviceRecord[], q: LookupQuery): DeviceRecord | 
     const id = q.vendor ? makeId(q.vendor, q.model) : undefined;
     const exact = id && records.find((r) => r.id === id);
     if (exact) return exact;
-    const best = search(records.map((r) => toIndexEntry(r)), `${q.vendor ?? ""} ${q.model}`, { limit: 1 })[0];
+    const best = search(records.map(entryOf), `${q.vendor ?? ""} ${q.model}`, { limit: 1 })[0];
     if (best && best.score >= 20) return records.find((r) => r.id === best.id) ?? null;
   }
   return null;
