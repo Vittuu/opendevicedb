@@ -4,6 +4,7 @@
 //   node src/cli.ts search "tello" --category drone
 //   node src/cli.ts claim --vendor Acme --model X1 --category toy --who me --contact me@x --scope "BLE" --days 30
 //   node src/cli.ts publish --id acme/x1 --patch '{"status":"partial-protocol"}'   (or --patch-file f.json)
+//   node src/cli.ts request --vendor Parrot --model "Bebop 2" --goal "fly it from Python"
 //   node src/cli.ts sources
 import { readFileSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
@@ -16,12 +17,13 @@ const COMMANDS: Record<string, { tool: string; positional?: string }> = {
   search: { tool: "search_devices", positional: "query" },
   claim: { tool: "claim_device" },
   publish: { tool: "publish_findings", positional: "id" },
+  request: { tool: "request_device" },
   sources: { tool: "list_sources" },
 };
 const NUMBERS = new Set(["days", "limit"]);
 
 function usage(): never {
-  console.error("usage: node src/cli.ts <lookup|search|claim|publish|sources> [arg] [--flag value ...]\n" +
+  console.error("usage: node src/cli.ts <lookup|search|claim|publish|request|sources> [arg] [--flag value ...]\n" +
     "flags are the tool's input fields (dashes or underscores), e.g. --fcc-id, --allow-downgrade; " +
     "publish takes --patch '<json>' or --patch-file <file>.\nenv: ODB_REPO=<checkout> or ODB_API_URL=<site url>");
   process.exit(2);
