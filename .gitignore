@@ -6,3 +6,4 @@ site/.astro/
 .claude/
 dist/
 packages/mcp/LICENSE
+outreach/
