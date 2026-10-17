@@ -18,6 +18,10 @@ so that nobody — human or AI agent — redoes work that already exists.
 
 If it is useful to you, a ⭐ helps people with the same devices find it.
 
+Contributions don't have to be complete: a single verified fact about a protocol (a BLE
+characteristic, a checksum, UART pins) helps the next person or agent go faster. See
+[Contribute](https://opendevicedb.org/contribute/#partial).
+
 See [SPEC.md](SPEC.md) for the design and [POLICY.md](POLICY.md) for what we accept.
 
 ```sh

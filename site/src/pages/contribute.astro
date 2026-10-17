@@ -22,6 +22,15 @@ const verificationExample = `verification:
     date: 2026-11-10
     firmware: "1.4.2"
     notes: tests/replay_takeoff_land.py passes on two units`;
+const partialExample = `interfaces:
+  - name: BLE light control
+    transport: ble
+    status: partial
+    confidence: low
+    notes: >-
+      Commands go to characteristic 0000ffe1 (service 0000ffe0), 7-byte frames
+      starting 0x7e, ending 0xef; byte 3 = brightness 0-100. Seen in captures,
+      not replayed yet.`;
 const themes = { light: "github-light", dark: "github-dark" } as const;
 ---
 <Base title="Contribute" description="How to add or improve a device record, claim a device you are working on, and how verification works.">
@@ -49,6 +58,15 @@ const themes = { light: "github-light", dark: "github-dark" } as const;
     <Code code={example} lang="yaml" themes={themes} />
     <p class="small muted">The <a href={`${REPO_URL}/blob/main/SPEC.md`}>specification</a> describes every field; the JSON Schema is normative.</p>
 
+    <h2 id="partial">Small findings are welcome</h2>
+    <p>
+      You don't need a full protocol or a working tool to contribute. A single useful fact — the BLE
+      service that carries commands, the checksum a packet uses, the UART pins and baud rate, the chip
+      under the shield, a capture of the pairing — can save the next person (or agent) hours. Add it as
+      an interface with status <code>partial</code> and an honest <code>confidence</code>: maintainers check
+      that it is relevant and plausible before merging, and the record says how far it was verified.
+    </p>
+    <Code code={partialExample} lang="yaml" themes={themes} />
     <h2 id="status">Status levels</h2>
     <ul class="list-plain">
       {STATUSES.map((s) => <li><StatusBadge status={s} /> <span class="muted">— {STATUS_HELP[s]}</span></li>)}
