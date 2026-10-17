@@ -11,7 +11,7 @@ const READ_ONLY = new Set(["lookup_device", "search_devices", "list_sources", "r
 
 export function createServer(backend: Backend, opts: { today?: string } = {}): McpServer {
   const server = new McpServer(
-    { name: "opendevicedb", version: "0.2.0" },
+    { name: "opendevicedb", version: "0.2.1" },
     {
       instructions:
         "OpenDeviceDB is a directory of devices whose protocols or firmware have already been reverse engineered. " +
