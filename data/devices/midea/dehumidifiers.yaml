@@ -1,0 +1,30 @@
+id: midea/dehumidifiers
+vendor: Midea
+model: Dehumidifiers (Wi-Fi, M-Smart)
+aliases: [Midea Dehumidifiers, Comfee Dehumidifiers, Midea device type 0xA1]
+category: appliance
+identifiers:
+  sku: [midea:0xA1]
+status: controllable
+vendor_support: active
+summary: >-
+  Midea-made Wi-Fi dehumidifiers (also sold under Comfee, Toshiba, Carrier, Electrolux and other
+  brands) speak Midea's reverse-engineered local LAN protocol (device type 0xA1), so
+  midea_ac_lan can read and control them without the cloud. Which features work depends on
+  the model: check the device-type document and the Midea app before enabling one.
+interfaces:
+  - name: Midea LAN protocol (type 0xA1)
+    transport: wifi
+    status: partial
+    confidence: medium
+    spec: https://github.com/wuwentao/midea_ac_lan/blob/main/doc/A1.md
+projects:
+  - name: midea_ac_lan (Home Assistant)
+    url: https://github.com/wuwentao/midea_ac_lan
+    kind: integration
+    license: MIT
+provenance:
+  sources: [curated, https://github.com/wuwentao/midea_ac_lan]
+  ai_assisted: true
+  tools: [claude-code]
+updated: 2026-10-17

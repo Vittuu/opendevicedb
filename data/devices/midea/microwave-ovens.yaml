@@ -1,0 +1,30 @@
+id: midea/microwave-ovens
+vendor: Midea
+model: Microwave ovens (Wi-Fi, M-Smart)
+aliases: [Midea Microwave ovens, Comfee Microwave ovens, Midea device type 0xB0]
+category: appliance
+identifiers:
+  sku: [midea:0xB0]
+status: controllable
+vendor_support: active
+summary: >-
+  Midea-made Wi-Fi microwave ovens (also sold under Comfee, Toshiba, Carrier, Electrolux and other
+  brands) speak Midea's reverse-engineered local LAN protocol (device type 0xB0), so
+  midea_ac_lan can read and control them without the cloud. Which features work depends on
+  the model: check the device-type document and the Midea app before enabling one. Never bypass the door interlock: magnetron capacitors stay lethal when unplugged.
+interfaces:
+  - name: Midea LAN protocol (type 0xB0)
+    transport: wifi
+    status: partial
+    confidence: medium
+    spec: https://github.com/wuwentao/midea_ac_lan/blob/main/doc/B0.md
+projects:
+  - name: midea_ac_lan (Home Assistant)
+    url: https://github.com/wuwentao/midea_ac_lan
+    kind: integration
+    license: MIT
+provenance:
+  sources: [curated, https://github.com/wuwentao/midea_ac_lan]
+  ai_assisted: true
+  tools: [claude-code]
+updated: 2026-10-17

@@ -1,0 +1,30 @@
+id: midea/refrigerators
+vendor: Midea
+model: Refrigerators (Wi-Fi, M-Smart)
+aliases: [Midea Refrigerators, Comfee Refrigerators, Midea device type 0xCA]
+category: appliance
+identifiers:
+  sku: [midea:0xCA]
+status: controllable
+vendor_support: active
+summary: >-
+  Midea-made Wi-Fi refrigerators (also sold under Comfee, Toshiba, Carrier, Electrolux and other
+  brands) speak Midea's reverse-engineered local LAN protocol (device type 0xCA), so
+  midea_ac_lan can read and control them without the cloud. Which features work depends on
+  the model: check the device-type document and the Midea app before enabling one.
+interfaces:
+  - name: Midea LAN protocol (type 0xCA)
+    transport: wifi
+    status: partial
+    confidence: medium
+    spec: https://github.com/wuwentao/midea_ac_lan/blob/main/doc/CA.md
+projects:
+  - name: midea_ac_lan (Home Assistant)
+    url: https://github.com/wuwentao/midea_ac_lan
+    kind: integration
+    license: MIT
+provenance:
+  sources: [curated, https://github.com/wuwentao/midea_ac_lan]
+  ai_assisted: true
+  tools: [claude-code]
+updated: 2026-10-17

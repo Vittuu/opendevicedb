@@ -1,0 +1,34 @@
+id: midea/air-conditioners
+vendor: Midea
+model: Air conditioners (Wi-Fi, M-Smart)
+aliases: [Midea Air conditioners, Comfee Air conditioners, Midea device type 0xAC]
+category: appliance
+identifiers:
+  sku: [midea:0xAC]
+status: controllable
+vendor_support: active
+summary: >-
+  Midea-made Wi-Fi air conditioners (split and portable) (also sold under Comfee, Toshiba, Carrier, Electrolux and other
+  brands) speak Midea's reverse-engineered local LAN protocol (device type 0xAC), so
+  midea_ac_lan can read and control them without the cloud. Which features work depends on
+  the model: check the device-type document and the Midea app before enabling one.
+interfaces:
+  - name: Midea LAN protocol (type 0xAC)
+    transport: wifi
+    status: documented
+    confidence: medium
+    spec: https://github.com/wuwentao/midea_ac_lan/blob/main/doc/AC.md
+projects:
+  - name: midea_ac_lan (Home Assistant)
+    url: https://github.com/wuwentao/midea_ac_lan
+    kind: integration
+    license: MIT
+  - name: msmart-ng
+    url: https://github.com/mill1000/midea-msmart
+    kind: library
+    license: MIT
+provenance:
+  sources: [curated, https://github.com/wuwentao/midea_ac_lan]
+  ai_assisted: true
+  tools: [claude-code]
+updated: 2026-10-17

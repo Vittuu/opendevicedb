@@ -1,0 +1,30 @@
+id: midea/top-load-washers
+vendor: Midea
+model: Top-load washing machines (Wi-Fi, M-Smart)
+aliases: [Midea Top-load washing machines, Comfee Top-load washing machines, Midea device type 0xDA]
+category: appliance
+identifiers:
+  sku: [midea:0xDA]
+status: controllable
+vendor_support: active
+summary: >-
+  Midea-made Wi-Fi top-load washing machines (also sold under Comfee, Toshiba, Carrier, Electrolux and other
+  brands) speak Midea's reverse-engineered local LAN protocol (device type 0xDA), so
+  midea_ac_lan can read and control them without the cloud. Which features work depends on
+  the model: check the device-type document and the Midea app before enabling one.
+interfaces:
+  - name: Midea LAN protocol (type 0xDA)
+    transport: wifi
+    status: partial
+    confidence: medium
+    spec: https://github.com/wuwentao/midea_ac_lan/blob/main/doc/DA.md
+projects:
+  - name: midea_ac_lan (Home Assistant)
+    url: https://github.com/wuwentao/midea_ac_lan
+    kind: integration
+    license: MIT
+provenance:
+  sources: [curated, https://github.com/wuwentao/midea_ac_lan]
+  ai_assisted: true
+  tools: [claude-code]
+updated: 2026-10-17

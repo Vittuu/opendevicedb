@@ -1,0 +1,39 @@
+id: neff/home-connect-appliances
+vendor: Neff
+model: Home Connect appliances
+aliases: [Neff Home Connect, BSH Home Connect]
+category: appliance
+status: controllable
+vendor_support: active
+summary: >-
+  Neff (BSH) appliances with Home Connect Wi-Fi: washing machines, dryers, dishwashers,
+  ovens, hobs, hoods, fridges, coffee machines. hcpy talks to them over the local network with
+  the reverse-engineered Home Connect local protocol (TLS-PSK or AES), so they keep working
+  without the cloud; the encryption keys are fetched once from the owner's account. Exact
+  features depend on each appliance's profile. BSH also offers an official cloud API.
+interfaces:
+  - name: Home Connect local protocol
+    transport: wifi
+    status: documented
+    confidence: medium
+    spec: https://github.com/hcpy2-0/hcpy
+    notes: WebSocket over TLS-PSK (port 443) or AES-CBC+HMAC (port 80); keys from the account profile
+  - name: Home Connect developer API
+    transport: cloud-api
+    status: documented
+    confidence: high
+    spec: https://developer.home-connect.com/
+projects:
+  - name: hcpy
+    url: https://github.com/hcpy2-0/hcpy
+    kind: library
+    license: MIT
+  - name: Home Connect developer program
+    url: https://developer.home-connect.com/
+    kind: protocol-doc
+    official: true
+provenance:
+  sources: [curated, https://github.com/hcpy2-0/hcpy]
+  ai_assisted: true
+  tools: [claude-code]
+updated: 2026-10-17
