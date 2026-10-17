@@ -1,8 +1,12 @@
 {
   "name": "opendevicedb",
+  "license": "AGPL-3.0-or-later",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/*", "site"],
+  "workspaces": [
+    "packages/*",
+    "site"
+  ],
   "scripts": {
     "validate": "npm run validate -w @opendevicedb/core",
     "import": "npm run import -w @opendevicedb/importers --",
@@ -10,5 +14,7 @@
     "dev": "npm run dev -w site",
     "mcp": "npm run start -w @opendevicedb/mcp"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }

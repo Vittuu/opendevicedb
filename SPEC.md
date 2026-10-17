@@ -41,7 +41,7 @@ One open directory, keyed by device model, that:
   We never host proprietary firmware images, keys, or copyrighted vendor code.
   We exclude anything whose purpose is to defeat a regulatory safety function
   (drone Remote ID, geofencing, radio power limits, emissions controls…). See `POLICY.md`.
-- **P6 — Independent and open.** Code MIT, data CC-BY-SA-4.0. No vendor affiliation.
+- **P6 — Independent and open.** Code AGPL-3.0-or-later (a hosted fork must publish its changes), data CC-BY-SA-4.0. The agent skill file (`packages/mcp/SKILL.md`) is CC0 so other tools (e.g. REA, MIT) can embed it. No vendor affiliation.
 
 ## Device record (summary — the JSON Schema is normative)
 

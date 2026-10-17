@@ -3,3 +3,4 @@ dist/
 site/dist/
 site/.astro/
 .DS_Store
+.claude/

@@ -19,4 +19,4 @@ npm run dev             # website on localhost
 npm run mcp             # MCP server on stdio
 ```
 
-Code: MIT. Data: CC BY-SA 4.0 (see LICENSE-DATA.md).
+Code: AGPL-3.0-or-later (see LICENSE). Data: CC BY-SA 4.0 (see LICENSE-DATA.md).
