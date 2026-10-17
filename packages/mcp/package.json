@@ -2,22 +2,59 @@
   "name": "@opendevicedb/mcp",
   "version": "0.1.0",
   "description": "MCP server for OpenDeviceDB: look up, claim and publish reverse-engineered device protocols",
-  "type": "module",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "reverse-engineering",
+    "right-to-repair",
+    "iot",
+    "firmware",
+    "claude",
+    "agents"
+  ],
+  "homepage": "https://opendevicedb.org/agents/",
+  "bugs": "https://github.com/opendevicedb/opendevicedb/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/opendevicedb/opendevicedb.git",
+    "directory": "packages/mcp"
+  },
   "license": "AGPL-3.0-or-later",
+  "type": "module",
   "bin": {
-    "opendevicedb-mcp": "./src/server.ts"
+    "opendevicedb-mcp": "./dist/server.js"
   },
   "exports": {
-    ".": "./src/tools.ts"
+    ".": "./dist/tools.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "SKILL.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
   },
   "scripts": {
     "start": "node src/server.ts",
     "cli": "node src/cli.ts",
-    "test": "node --test test/*.test.ts"
+    "test": "node --test test/*.test.ts",
+    "build": "esbuild src/server.ts src/cli.ts src/tools.ts --bundle --platform=node --format=esm --target=node20 --outdir=dist --external:@modelcontextprotocol/sdk --external:zod --external:yaml --external:ajv --external:ajv-formats && cp ../../LICENSE LICENSE",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
-    "@opendevicedb/core": "0.1.0",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "yaml": "^2.6.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "@opendevicedb/core": "0.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

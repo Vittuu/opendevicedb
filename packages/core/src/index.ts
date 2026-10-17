@@ -6,12 +6,15 @@ import { fileURLToPath } from "node:url";
 import YAML from "yaml";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
+import SCHEMA_JSON from "../../../schema/device.schema.json" with { type: "json" };
 import { STATUSES, statusRank, makeId, search, toIndexEntry, compact, type Status, type DeviceRecord } from "./browser.ts";
 
 export * from "./browser.ts";
 
 export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 export const SCHEMA_PATH = join(REPO_ROOT, "schema/device.schema.json");
+/** The normative record schema, imported so bundles (npm package, site) carry it. */
+export const SCHEMA: any = SCHEMA_JSON;
 
 // ---------- validation ----------
 
@@ -21,7 +24,7 @@ export function validate(record: unknown): string[] {
   if (!validator) {
     const ajv = new (Ajv2020 as any)({ allErrors: true, strict: false });
     (addFormats as any)(ajv);
-    validator = ajv.compile(JSON.parse(readFileSync(SCHEMA_PATH, "utf8")));
+    validator = ajv.compile(SCHEMA);
   }
   if (validator!(record)) return [];
   return (validator!.errors ?? []).map((e: any) => `${e.instancePath || "/"} ${e.message}${e.params?.allowedValues ? " " + JSON.stringify(e.params.allowedValues) : ""}`);

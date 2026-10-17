@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, relative, join } from "node:path";
 import { z } from "zod";
 import {
-  SCHEMA_PATH, STATUSES, curatedPath, effectiveStatus, liveClaims, lookup, makeId, mergeRecords,
+  SCHEMA, STATUSES, curatedPath, effectiveStatus, liveClaims, lookup, makeId, mergeRecords,
   parseRecordYaml, search, stringifyRecordYaml, today, validate,
   type Claim, type DeviceRecord, type LookupQuery, type Status,
 } from "@opendevicedb/core";
@@ -13,7 +13,7 @@ import { policyScan, POLICY_POINTER, type PolicyHit } from "./policy.ts";
 
 // ---------- schema-derived enums (the JSON Schema stays normative) ----------
 
-const P = JSON.parse(readFileSync(SCHEMA_PATH, "utf8")).properties;
+const P = SCHEMA.properties;
 const en = (values: string[]) => z.enum(values as [string, ...string[]]);
 export const CATEGORIES: string[] = P.category.enum;
 const IFACE = P.interfaces.items.properties;

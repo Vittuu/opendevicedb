@@ -1,6 +1,7 @@
 // Data backends for the MCP server: a local repository checkout (read + write) or the
 // static API published by the site (read-only). See SPEC.md "Static API".
-import { resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { join, resolve } from "node:path";
 import {
   loadAll, loadCurated, loadSnapshots, toIndexEntry, today, REPO_ROOT,
   type DeviceRecord, type IndexEntry, type Status,
@@ -141,9 +142,13 @@ export class RemoteBackend implements Backend {
 
 // ---------- selection ----------
 
-/** ODB_REPO (local, writable) wins over ODB_API_URL (remote, read-only); default: this checkout. */
+export const DEFAULT_API_URL = "https://opendevicedb.org";
+
+/** ODB_REPO (local, writable) wins over ODB_API_URL (remote, read-only); default: this checkout
+ *  when run from one, otherwise the public site (npm install). */
 export function backendFromEnv(env: Record<string, string | undefined> = process.env): Backend {
   if (env.ODB_REPO) return new LocalBackend(resolve(env.ODB_REPO));
   if (env.ODB_API_URL) return new RemoteBackend(env.ODB_API_URL);
-  return new LocalBackend(REPO_ROOT);
+  if (existsSync(join(REPO_ROOT, "data/devices"))) return new LocalBackend(REPO_ROOT);
+  return new RemoteBackend(DEFAULT_API_URL);
 }
