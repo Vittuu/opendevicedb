@@ -98,3 +98,14 @@ test("rtl_433 decoder file → records", () => {
   assert.deepEqual(r.provenance, { sources: ["rtl_433"] });
   assert.deepEqual(fromDecoderFile("include/r_device.h", FILE, D), []);
 });
+
+test("rtl_433 install route: listen with an SDR receiver, receive only", () => {
+  const recs = fromDecoderFile("src/devices/acurite.c", FILE, D);
+  allValid(recs);
+  for (const r of recs) assert.equal(r.install!.length, 1);
+  assert.deepEqual(recs[0].install, [{
+    project: "rtl_433", method: "host-software", guide: "https://github.com/merbanan/rtl_433", difficulty: "medium",
+    tools: ["RTL-SDR USB receiver (or another SDR rtl_433 supports)"], brick_risk: "none", reversible: "yes",
+    notes: "Receive only: rtl_433 decodes the radio messages the device sends; it does not change or command the device.",
+  }]);
+});

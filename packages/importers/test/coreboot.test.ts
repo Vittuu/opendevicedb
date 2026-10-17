@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { validate, type DeviceRecord } from "@opendevicedb/core";
 import {
   parseBoardInfo, parseKconfigName, parseVendorName, parseVariantDirs, corebootCategory, normVendor,
-  splitLabel, productVendor, chromeCategory, googleProducts, fromBoard,
+  splitLabel, productVendor, chromeCategory, googleProducts, fromBoard, boardDoc, corebootInstall, COREBOOT_FLASHING,
 } from "../src/sources/coreboot.ts";
 
 const D = "2026-10-17";
@@ -122,4 +122,44 @@ test("coreboot boards → records", () => {
   // Dell Inc. → Dell, vendor prefix stripped from the label
   const dell = fromBoard({ dir: "dell/snb_ivb_workstations", vendorName: "Dell Inc.", kconfigName: 'config BOARD_DELL_PRECISION_T1650\n\tbool "Dell Precision T1650"\n', boardInfo: "Category: desktop\n" }, D);
   assert.deepEqual(dell.map((r) => r.id), ["dell/precision-t1650"]);
+});
+
+test("coreboot install routes", () => {
+  const docs = new Set(["lenovo/t440p.md", "up/squared/index.md", "framework/azalea/azalea.md", "lenovo/x2xx_series.md"]);
+  assert.equal(boardDoc("lenovo/t440p", docs), "https://doc.coreboot.org/mainboard/lenovo/t440p.html");
+  assert.equal(boardDoc("up/squared", docs), "https://doc.coreboot.org/mainboard/up/squared/index.html");
+  assert.equal(boardDoc("framework/azalea", docs), "https://doc.coreboot.org/mainboard/framework/azalea/azalea.html");
+  assert.equal(boardDoc("lenovo/x230", docs), undefined, "series pages are not guessed");
+  assert.equal(COREBOOT_FLASHING, "https://doc.coreboot.org/tutorial/flashing_firmware/index.html");
+
+  const [t440p] = fromBoard({
+    dir: "lenovo/t440p", vendorName: "Lenovo", kconfigName: 'config BOARD_LENOVO_THINKPAD_T440P\n\tbool "ThinkPad T440p"\n',
+    boardInfo: "Category: laptop\nROM package: SOIC-8\nROM protocol: SPI\nROM socketed: n\nFlashrom support: n\n",
+    doc: boardDoc("lenovo/t440p", docs),
+  }, D);
+  assert.deepEqual(validate(t440p), []);
+  assert.deepEqual(t440p.install!.map(({ notes, ...r }) => r), [{
+    project: "coreboot", method: "spi-programmer", guide: "https://doc.coreboot.org/mainboard/lenovo/t440p.html", difficulty: "hard",
+    opens_device: true, brick_risk: "high", reversible: "yes", tools: ["SPI flash programmer (CH341A)", "SOIC-8 test clip"],
+  }]);
+  assert.match(t440p.install![0].notes!, /no official images/);
+  assert.match(t440p.install![0].notes!, /Back up the original flash/);
+  assert.doesNotMatch(t440p.install![0].notes!, /flashrom supports/);
+
+  // socketed DIP chip: no clip; flashrom support mentioned; no doc page → generic guide
+  const dip = corebootInstall({ "rom protocol": "SPI", "rom package": "DIP-8", "rom socketed": "y", "flashrom support": "y" }, "asus");
+  assert.equal(dip.guide, COREBOOT_FLASHING);
+  assert.deepEqual(dip.tools, ["SPI flash programmer (CH341A)"]);
+  assert.match(dip.notes!, /socketed/);
+  assert.match(dip.notes!, /flashrom supports the board/);
+  // parallel / FWH flash: not an SPI programmer job
+  const fwh = corebootInstall({ "rom protocol": "FWH", "rom package": "PLCC", "rom socketed": "y" }, "asus");
+  assert.equal(fwh.method, "other");
+  assert.deepEqual(fwh.tools, ["Flash programmer for FWH PLCC chips"]);
+  // Chromebooks: write protection
+  const cb = corebootInstall({}, "google");
+  assert.equal(cb.method, "other");
+  assert.equal(cb.difficulty, "hard");
+  assert.match(cb.notes!, /write protection/);
+  assert.equal(cb.opens_device, undefined);
 });

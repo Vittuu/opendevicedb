@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { validate } from "@opendevicedb/core";
 import { finalize } from "../src/lib.ts";
-import { fromCloudcutter, isModelCode, profileChip, stripFirmwareVersion, tuyaCategory, tuyaModel, tuyaVendor } from "../src/sources/cloudcutter.ts";
+import { fromCloudcutter, isModelCode, profileChip, stripFirmwareVersion, tuyaCategory, tuyaModel, tuyaVendor, profileFirmware, combineFirmware, CLOUDCUTTER_GUIDE } from "../src/sources/cloudcutter.ts";
 
 const D = "2026-10-17";
 
@@ -52,6 +52,7 @@ test("cloudcutter device → record", () => {
     id: "3stone/ebe-baw550", vendor: "3Stone", model: "EBE-BAW550", aliases: ["3Stone EBE-BAW550 16W RGBCT Bulb"],
     category: "light", identifiers: { chips: ["BK7231N", "CB2L"] }, status: "open-firmware",
     projects: [{ name: "tuya-cloudcutter", url: "https://github.com/tuya-cloudcutter/tuya-cloudcutter.github.io/blob/master/devices/3stone-ebe-baw550-16w-rgbct-bulb-v1.3.20.json", kind: "tool", license: "MIT" }],
+    install: a.install, // see "cloudcutter install route"
     provenance: { sources: ["cloudcutter"] }, updated: D,
   });
   // white label, no model code, no device_configuration: category from the profile name
@@ -66,4 +67,36 @@ test("cloudcutter device → record", () => {
   assert.equal(f.merged, 1);
   assert.equal(f.records[0].id, "arlec/pc191ha");
   assert.equal(f.records[0].projects!.length, 2);
+});
+
+test("cloudcutter install route", () => {
+  assert.equal(profileFirmware("oem-bk7231s-rnd-switch-1.1.0-sdk-1.0.2-40.00"), "1.1.0 (SDK 1.0.2-40.00)");
+  assert.equal(profileFirmware("lightleak-bk7231t"), null);
+  const chips = {};
+  const a = fromCloudcutter("ahrise-ahr-083-power-strip-v1.1.0", {
+    manufacturer: "AHRISE", name: "AHR-083 Power Strip v1.1.0", profiles: ["oem-bk7231s-rnd-switch-1.1.0-sdk-1.0.2-40.00"],
+  }, chips, D)!;
+  assert.deepEqual(validate(a), []);
+  assert.equal(a.install!.length, 1);
+  const r = a.install![0];
+  assert.equal(r.project, "tuya-cloudcutter");
+  assert.equal(r.method, "ota-exploit");
+  assert.equal(r.guide, CLOUDCUTTER_GUIDE);
+  assert.equal(r.guide, "https://github.com/tuya-cloudcutter/tuya-cloudcutter/blob/main/INSTRUCTIONS.md");
+  assert.equal(r.installer, "https://github.com/tuya-cloudcutter/tuya-cloudcutter");
+  assert.equal(r.difficulty, "medium");
+  assert.equal(r.opens_device, false);
+  assert.deepEqual(r.tools, ["Linux computer (not a VM) with Docker", "Spare Wi-Fi adapter that supports AP mode"]);
+  assert.match(r.firmware_constraints!, /cloudcutter lists for this device: 1\.1\.0 \(SDK 1\.0\.2-40\.00\)\./);
+  assert.match(r.firmware_constraints!, /patched SDK/);
+  assert.equal(r.reversible, undefined);
+
+  // one model, two firmware files: the merged record's route lists both versions
+  const v1 = fromCloudcutter("arlec-pc191ha-a", { manufacturer: "Arlec", name: "PC191HA Plug v1.3.5", profiles: ["oem-bk7231s-dltj-1.3.5-sdk-1.0.2-40.00"] }, chips, D)!;
+  const v2 = fromCloudcutter("arlec-pc191ha-b", { manufacturer: "Arlec", name: "PC191HA Plug v1.1.8", profiles: ["oem-bk7231n-dltj-1.1.8-sdk-2.3.1-40.00"] }, chips, D)!;
+  const v3 = fromCloudcutter("arlec-pc191ha-c", { manufacturer: "Arlec", name: "PC191HA Plug v1.1.10", profiles: ["oem-bk7231n-dltj-1.1.10-sdk-2.3.1-40.00"] }, chips, D)!;
+  const f = finalize(combineFirmware([v1, v2, v3]));
+  assert.equal(f.records.length, 1);
+  assert.equal(f.records[0].install!.length, 1);
+  assert.match(f.records[0].install![0].firmware_constraints!, /: 1\.1\.8 \(SDK 2\.3\.1-40\.00\), 1\.1\.10 \(SDK 2\.3\.1-40\.00\), 1\.3\.5 \(SDK 1\.0\.2-40\.00\)\./);
 });

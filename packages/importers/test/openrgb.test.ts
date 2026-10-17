@@ -61,3 +61,22 @@ test("openrgb sources → records", () => {
   assert.equal(f.records[0].identifiers, undefined, "SMBus GPUs have no USB id");
   assert.equal(f.records[0].interfaces![0].transport, "other");
 });
+
+test("openrgb install route: host software, SMBus devices need access set up first", () => {
+  const files = new Map([
+    ["Controllers/RazerController/RazerControllerDetect.cpp", 'REGISTER_HID_DETECTOR_IPU("Razer Naga Pro (Wired)", DetectRazerControllers, 0x1532, 0x008F, 0x00, 0x01, 0x02);'],
+    ["Controllers/EVGAGPUController/EVGAGPUDetect.cpp", 'REGISTER_I2C_PCI_DETECTOR("EVGA GeForce RTX 2080 Ti XC Ultra", DetectEVGA, NVIDIA_VEN, NVIDIA_RTX2080TI_DEV, EVGA_SUB_VEN, EVGA_SUB_DEV, 0x49);'],
+  ]);
+  const { records } = fromSources(files, D);
+  const [usb] = records.filter((r) => r.vendor === "Razer"), [smbus] = records.filter((r) => r.vendor === "EVGA");
+  for (const r of [usb, smbus]) assert.deepEqual(validate(r), [], JSON.stringify(r));
+  assert.deepEqual(usb.install, [{
+    project: "OpenRGB", method: "host-software",
+    guide: "https://gitlab.com/CalcProgrammer1/OpenRGB/-/blob/master/Documentation/USBAccess.md",
+    installer: "https://openrgb.org/releases.html", difficulty: "easy", brick_risk: "low", reversible: "yes",
+    notes: "Nothing is flashed: OpenRGB sets the lighting over USB from your computer. OpenRGB warns that its reverse-engineered protocols have damaged some hardware in the past.",
+  }]);
+  assert.equal(smbus.install![0].guide, "https://gitlab.com/CalcProgrammer1/OpenRGB/-/blob/master/Documentation/SMBusAccess.md");
+  assert.equal(smbus.install![0].difficulty, "medium");
+  assert.match(smbus.install![0].notes!, /SMBus\/I2C access must be enabled/);
+});

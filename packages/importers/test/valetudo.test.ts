@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { validate } from "@opendevicedb/core";
-import { anchorOf, parseSupportedRobots, fromRobot, modelCodes, robotBrand } from "../src/sources/valetudo.ts";
+import { anchorOf, parseSupportedRobots, fromRobot, modelCodes, robotBrand, valetudoInstall } from "../src/sources/valetudo.ts";
 
 const D = "2026-10-17";
 
@@ -108,6 +108,7 @@ test("robot → record", () => {
       { name: "Valetudo rooting instructions (UART)", url: "https://valetudo.cloud/pages/installation/dreame/#uart-shell", kind: "other" },
       { name: "Valetudo rooting instructions (Init override (may be patched))", url: "https://gist.github.com/x/y", kind: "other" },
     ],
+    install: c1.install, // see "rooting links → install routes"
     provenance: { sources: ["valetudo"] }, updated: D,
   });
   assert.equal(p.id, "xiaomi/vacuum-mop-p");
@@ -125,4 +126,34 @@ test("helpers", () => {
   assert.deepEqual(modelCodes("Dreame X40 Ultra"), []);
   assert.equal(robotBrand("Mova"), "MOVA");
   assert.equal(robotBrand("Dreame"), "Dreame");
+});
+
+test("rooting links → install routes", () => {
+  const [c1] = parseSupportedRobots(MD).map((r) => fromRobot(r, D)!);
+  // the UART page is a Valetudo route; the third-party gist is not
+  assert.deepEqual(c1.install, [{
+    project: "Valetudo", guide: "https://valetudo.cloud/pages/installation/dreame/#uart-shell", method: "serial", difficulty: "hard",
+    tools: ["USB-serial adapter (3.3 V)", "Dreame Breakout PCB", "USB stick"],
+    notes: "Through the robot's debug connector with the Dreame Breakout PCB; on robots with secure boot it must be defeated first or the robot is bricked.",
+  }]);
+  const robot = (rooting: { name: string; url: string }[]) => valetudoInstall({ brand: "Roborock", heading: "S5", anchor: "s5", soldAs: [], rooting });
+  const rr = robot([
+    { name: "OTA (before 2020-03)", url: "https://valetudo.cloud/pages/installation/roborock/#ota" },
+    { name: "Vinda (after 2020-03)", url: "https://valetudo.cloud/pages/installation/roborock/#vinda" },
+    { name: "FEL", url: "https://valetudo.cloud/pages/installation/roborock/#fel-rooting" },
+    { name: "Fastboot", url: "https://valetudo.cloud/pages/installation/dreame/#fastboot" },
+    { name: "ADB", url: "https://valetudo.cloud/pages/installation/midea/#adb" },
+    { name: "ADB", url: "https://github.com/Hypfer/valetudo-crl200s-root" },
+  ]);
+  assert.deepEqual(rr.map((r) => [r.method, r.difficulty, r.opens_device, r.brick_risk]), [
+    ["ota-exploit", "medium", false, undefined],
+    ["serial", "hard", true, undefined],
+    ["usb-bootloader", "hard", true, undefined],
+    ["usb-bootloader", "hard", undefined, "high"],
+    ["other", "hard", true, "high"],
+    ["other", "medium", undefined, "high"],
+  ]);
+  assert.equal(rr[0].firmware_constraints, 'Valetudo qualifies this method: "before 2020-03".');
+  assert.equal(rr[2].firmware_constraints, undefined);
+  for (const r of rr) assert.equal(r.reversible, undefined);
 });

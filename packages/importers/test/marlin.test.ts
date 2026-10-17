@@ -43,3 +43,17 @@ test("marlin paths → records, board variants merged, same ids as Klipper", () 
   assert.equal(fromConfig("config/printer-makergear-m2-2016.cfg", "", D)[0].id, recs[1].id);
   assert.equal(fromPaths([`${E}Sovol/SV-01/CrealityV22/Configuration.h`], D)[0].id, fromConfig("config/printer-sovol-sv01-2020.cfg", "", D)[0].id);
 });
+
+test("marlin install route: SD card by default, the 8-bit exceptions in the notes", () => {
+  const [r] = fromPaths([`${E}Creality/Ender-3 V2/CrealityV422/Configuration.h`], D);
+  assert.deepEqual(validate(r), []);
+  assert.equal(r.install!.length, 1);
+  const i = r.install![0];
+  assert.equal(i.project, "Marlin");
+  assert.equal(i.method, "sd-card");
+  assert.equal(i.guide, "https://marlinfw.org/docs/basics/install.html");
+  assert.equal(i.difficulty, "medium");
+  assert.equal(i.brick_risk, "low");
+  assert.equal(i.reversible, "partial");
+  assert.match(i.notes!, /8-bit boards are flashed over USB/);
+});

@@ -5,7 +5,7 @@
 // (profiles/<slug>.json, whose firmware.chip is the MCU) and, for most, the Tuya
 // device_configuration (module, pins, light category code).
 // There is no category field upstream: it is derived from the name and the Tuya config.
-import { makeId, today, type DeviceRecord } from "@opendevicedb/core";
+import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
 import { clean, firstMatch, githubFiles, githubRaw, mapLimit, type Source } from "../lib.ts";
 
 const REPO = "tuya-cloudcutter/tuya-cloudcutter.github.io", BRANCH = "master";
@@ -92,6 +92,47 @@ export function profileChip(p: any): string | null {
 /** Tuya light category codes in device_configuration.category ("0505" = RGBCW light). */
 const TUYA_LIGHT_CODE = /^(05\d\d|11\d\d)$/;
 
+// ---------- install route (SPEC R1) ----------
+
+const TOOL_REPO = "https://github.com/tuya-cloudcutter/tuya-cloudcutter";
+export const CLOUDCUTTER_GUIDE = `${TOOL_REPO}/blob/main/INSTRUCTIONS.md`;
+
+/** Tuya firmware version and SDK of a profile slug ("oem-bk7231s-rnd-switch-1.1.0-sdk-1.0.2-40.00"). */
+export function profileFirmware(profile: string): string | null {
+  const m = clean(profile).match(/-(\d+\.\d+\.\d+)-sdk-(\d+\.\d+\.\d+-\d+\.\d+)$/);
+  return m ? `${m[1]} (SDK ${m[2]})` : null;
+}
+
+/** The exploit only works on the exact Tuya firmware builds cloudcutter has a profile for. */
+export function cloudcutterConstraint(firmware: string[]): string {
+  const v = [...new Set(firmware)].sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
+  const listed = v.length ? `only with the Tuya firmware cloudcutter lists for this device: ${v.join(", ")}` : "only with the Tuya firmware versions cloudcutter lists for this device";
+  return `Works ${listed}. Check the "Main Module" version in the Tuya or Smart Life app and do not update the device first. Firmware built on Tuya's patched SDK (from February 2022) cannot be flashed over the air: serial flashing is the alternative.`;
+}
+
+/**
+ * Over-the-air exploit run from a Linux computer (not a VM) with a spare Wi-Fi adapter that
+ * can act as an access point, in Docker; the device stays closed. It replaces the Tuya
+ * firmware with OpenBeken, ESPHome (LibreTiny) or another image and cuts the device off the
+ * Tuya cloud for good. No way back to the stock firmware is documented.
+ */
+/** Firmware versions behind each record's route, for combineFirmware. */
+const FIRMWARE = new WeakMap<DeviceRecord, string[]>();
+
+export function cloudcutterInstall(firmware: string[]): InstallRoute {
+  return {
+    project: "tuya-cloudcutter",
+    method: "ota-exploit",
+    guide: CLOUDCUTTER_GUIDE,
+    installer: TOOL_REPO,
+    difficulty: "medium",
+    tools: ["Linux computer (not a VM) with Docker", "Spare Wi-Fi adapter that supports AP mode"],
+    opens_device: false,
+    firmware_constraints: cloudcutterConstraint(firmware),
+    notes: "Command line. The device can no longer use the Tuya apps or cloud afterwards.",
+  };
+}
+
 export function fromCloudcutter(slug: string, dev: any, chips: Record<string, string | null>, date = today()): DeviceRecord | null {
   const vendor = tuyaVendor(dev?.manufacturer);
   const name = clean(dev?.name);
@@ -99,9 +140,10 @@ export function fromCloudcutter(slug: string, dev: any, chips: Record<string, st
   const { model, description } = tuyaModel(name);
   const conf = dev.device_configuration ?? {};
   const profiles: string[] = Array.isArray(dev.profiles) ? dev.profiles.map(clean) : [];
+  const firmware = profiles.map(profileFirmware).filter((x): x is string => !!x);
   const hint = TUYA_LIGHT_CODE.test(clean(conf.category)) ? "light"
     : firstMatch([[/light|strip|bulb|lamp/i, "light"], [/plug|dltj|socket/i, "smart-plug"], [/switch|dimmer|dctrl/i, "switch"]], profiles.join(" "), "other");
-  return {
+  const rec: DeviceRecord = {
     id: makeId(vendor, model),
     vendor,
     model,
@@ -117,9 +159,27 @@ export function fromCloudcutter(slug: string, dev: any, chips: Record<string, st
       kind: "tool",
       license: "MIT",
     }],
+    install: [cloudcutterInstall(firmware)],
     provenance: { sources: ["cloudcutter"] },
     updated: date,
   };
+  FIRMWARE.set(rec, firmware);
+  return rec;
+}
+
+/**
+ * Device files of one model (one per Tuya firmware version) merge into one record, and the
+ * merge keeps only the first route per method and guide: give every copy the union of the
+ * firmware versions first.
+ */
+export function combineFirmware(records: DeviceRecord[]): DeviceRecord[] {
+  const versions = new Map<string, string[]>();
+  for (const r of records) versions.set(r.id, [...(versions.get(r.id) ?? []), ...(FIRMWARE.get(r) ?? [])]);
+  for (const r of records) {
+    const route = r.install?.find((i) => i.method === "ota-exploit");
+    if (route) route.firmware_constraints = cloudcutterConstraint(versions.get(r.id)!);
+  }
+  return records;
 }
 
 const source: Source = {
@@ -137,7 +197,7 @@ const source: Source = {
     const out = await mapLimit(devs, 16, async (p) => {
       try { return fromCloudcutter(p.match(DEVICE_FILE)![1], JSON.parse(await githubRaw(REPO, BRANCH, p)), chips); } catch { return null; }
     });
-    const ok = out.filter((r): r is DeviceRecord => !!r);
+    const ok = combineFirmware(out.filter((r): r is DeviceRecord => !!r));
     console.error(`cloudcutter: ${devs.length} device files, ${Object.keys(chips).length} profiles, ${devs.length - ok.length} unusable`);
     return ok;
   },

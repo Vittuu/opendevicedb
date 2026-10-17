@@ -6,7 +6,7 @@
 // (FoamCutter, SCARA, Polargraph…) and single-level directories without a vendor are skipped.
 // Vendor and model spellings go through the Klipper importer's printerVendor()/canonModel()
 // so that the same printer gets the same id from both sources.
-import { makeId, today, type DeviceRecord } from "@opendevicedb/core";
+import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
 import { clean, githubFiles, type Source } from "../lib.ts";
 import { printerVendor, canonModel } from "./klipper.ts";
 
@@ -75,6 +75,22 @@ export function parseExampleDir(path: string): { dir: string; vendor: string; mo
   return model ? { dir, vendor, model, aliases: [] } : null;
 }
 
+/**
+ * Install route (SPEC R1). Only the directory tree is read, so the board is unknown: the
+ * route says SD card (how most 32-bit printer boards take firmware.bin) and the notes give
+ * the 8-bit exceptions.
+ */
+export const MARLIN_INSTALL: InstallRoute = {
+  project: "Marlin",
+  method: "sd-card",
+  guide: "https://marlinfw.org/docs/basics/install.html",
+  difficulty: "medium",
+  tools: ["Computer to build Marlin with the example configuration (PlatformIO), unless a pre-built binary exists", "microSD card or USB cable"],
+  brick_risk: "low",
+  reversible: "partial",
+  notes: "Most 32-bit boards install firmware.bin from the SD card; 8-bit boards are flashed over USB, and some ship without a bootloader (then an ISP programmer is needed). Going back needs the vendor's stock firmware file, when the vendor publishes it.",
+};
+
 export function fromPaths(paths: string[], date = today()): DeviceRecord[] {
   const out = new Map<string, DeviceRecord>();
   for (const p of paths) {
@@ -89,6 +105,7 @@ export function fromPaths(paths: string[], date = today()): DeviceRecord[] {
       id, vendor: e.vendor, model: e.model, aliases: e.aliases, category: "3d-printer", status: "open-firmware",
       summary: `Marlin ships an example configuration for this printer (config/examples/${e.dir}); building Marlin with it replaces the printer's firmware.`,
       projects: [{ name: "Marlin (example configuration)", url, kind: "firmware", license: "GPL-3.0" }],
+      install: [{ ...MARLIN_INSTALL, tools: [...MARLIN_INSTALL.tools!] }],
       provenance: { sources: ["marlin"] },
       updated: date,
     });

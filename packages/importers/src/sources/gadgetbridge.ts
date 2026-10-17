@@ -15,7 +15,7 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import YAML from "yaml";
-import { makeId, slugify, today, type DeviceRecord } from "@opendevicedb/core";
+import { makeId, slugify, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
 import { clean, type Source } from "../lib.ts";
 
 const WEBSITE = "https://codeberg.org/Freeyourgadget/website.git";
@@ -174,6 +174,42 @@ const LINK_PROJECTS: Record<string, { name: string; kind: string }> = {
 
 export const gadgetPageUrl = (category: string, page: string) => `${SITE}/gadgets/${category}/${page}/`;
 
+// ---------- install route (SPEC R1) ----------
+
+const APP_INSTALLER = "https://f-droid.org/packages/nodomain.freeyourgadget.gadgetbridge/";
+
+/** pair_* flags (website extra_config.yml) that need something from the vendor app first. */
+const PAIRING_NOTES: Record<string, { difficulty: InstallRoute["difficulty"]; notes: string }> = {
+  pair_huami: { difficulty: "medium", notes: `Pair with the vendor app (Zepp / Zepp Life / Mi Fit) first and extract the authentication key: ${SITE}/basics/pairing/huami-xiaomi-server/` },
+  pair_xiaomi: { difficulty: "medium", notes: `Pair with the vendor app (Mi Fitness / Xiaomi Wear) first and extract the authentication key: ${SITE}/basics/pairing/huami-xiaomi-server/` },
+  pair_fossil: { difficulty: "medium", notes: `Pair with the Fossil app first and extract the authentication key: ${SITE}/basics/pairing/fossil-server/` },
+  pair_nothing_cmf: { difficulty: "medium", notes: `Pair with the CMF Watch app first and extract the authentication key: ${SITE}/basics/pairing/nothing-cmf-server/` },
+  pair_auth_key: { difficulty: "medium", notes: "Pair with the vendor app first and extract the authentication key; after that the vendor app is not needed." },
+  pair_connect_once: { difficulty: "easy", notes: "Connect once with the vendor app first; after that the vendor app is not needed." },
+  pair_victron: { difficulty: "easy", notes: "Enable GATT in the VictronConnect app first." },
+};
+
+/**
+ * Nothing is flashed: the gadget is paired with the Gadgetbridge Android app. pair_free gadgets
+ * pair directly; the other pair_* flags say what the vendor app must do first; without a
+ * known pairing flag the route says so.
+ */
+export function gadgetInstall(flags: string[], guide: string): InstallRoute {
+  const known = flags.map((f) => PAIRING_NOTES[f]).find(Boolean);
+  const free = flags.includes("pair_free");
+  return {
+    project: "Gadgetbridge",
+    method: "pairing",
+    guide,
+    installer: APP_INSTALLER,
+    difficulty: known?.difficulty ?? (free ? "easy" : "medium"),
+    tools: ["Android phone with the Gadgetbridge app"],
+    brick_risk: "none",
+    reversible: "yes",
+    ...(known ? { notes: known.notes } : free ? {} : { notes: "Pairing method not documented yet: the vendor app may be needed first." }),
+  };
+}
+
 export function fromGadget(e: GadgetEntry, page: string, p: GadgetPage, date = today()): DeviceRecord | null {
   const heading = p.headings.get(e.key);
   if (!heading || SKIP_KEYS.has(e.key)) return null;
@@ -198,6 +234,7 @@ export function fromGadget(e: GadgetEntry, page: string, p: GadgetPage, date = t
     category: gadgetCategory(e.category, e.key) as DeviceRecord["category"],
     status: gadgetStatus(e.flags),
     projects,
+    install: [gadgetInstall(e.flags, projects[0].url)],
     provenance: { sources: ["gadgetbridge"] },
     updated: date,
   };

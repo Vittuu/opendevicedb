@@ -133,3 +133,16 @@ test("canon and sierra tables", () => {
   assert.equal(s[1]!.status, "controllable");
   for (const r of [...recs, ...s]) if (r) assert.deepEqual(validate(r), [], JSON.stringify(r));
 });
+
+test("libgphoto2 install route: host software, nothing on the camera", () => {
+  const usb = fromEntry("ptp2", { vendor: "Nikon", model: "DSC D90", usb: [0x04b0, 0x0421], capture: true }, D)!;
+  const serial = fromEntry("sierra", { vendor: "Epson", model: "PhotoPC 500", usb: null, capture: false }, D)!;
+  for (const r of [usb, serial]) assert.deepEqual(validate(r), [], JSON.stringify(r));
+  assert.deepEqual(usb.install, [{
+    project: "libgphoto2", method: "host-software", guide: "http://www.gphoto.org/doc/manual/", difficulty: "easy",
+    tools: ["USB cable"], brick_risk: "none", reversible: "yes",
+    notes: "Nothing is installed on the camera: gphoto2 or a program built on libgphoto2 (photo managers, tethering tools) talks to it from your computer.",
+  }]);
+  assert.equal(serial.install![0].difficulty, "medium");
+  assert.deepEqual(serial.install![0].tools, ["The camera's serial or USB cable"]);
+});

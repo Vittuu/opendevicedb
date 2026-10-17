@@ -135,7 +135,7 @@ Accounts, comments, a write API, hosting of binaries, automatic verification.
 
 ## Roadmap (ideas, to be specified before any code)
 
-- **R1 — Guided installer.** Specified below (agreed with the owner on 2026-10-17).
+- **R1 — Guided installer.** Built on 2026-10-17, see the section below.
 - **R2 — Preserving open binaries (BitTorrent).** Keep open builds available when a
   project's download server disappears. Limits from P5: only binaries whose licence allows
   redistribution, never vendor images; GPL binaries travel with their corresponding source;
@@ -144,7 +144,7 @@ Accounts, comments, a write API, hosting of binaries, automatic verification.
   Archive for binaries, Software Heritage for source). Needs a legal review before
   anything is seeded. (Owner, 2026-10-17.)
 
-## R1 — Guided installer (agreed 2026-10-17, not built yet)
+## R1 — Guided installer (agreed and built 2026-10-17)
 
 **Goal.** On a device page, someone who does not code sees in 30 seconds whether there is a
 way to put open firmware or software on it, what it takes, what can go wrong, and which

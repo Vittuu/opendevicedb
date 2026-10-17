@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { validate } from "@opendevicedb/core";
 import { finalize } from "../src/lib.ts";
-import { fromDevice, parseDeviceYaml, lineageCategory, lineageUrl, normModel, normVendor, isQualifier } from "../src/sources/lineageos.ts";
+import { fromDevice, parseDeviceYaml, lineageCategory, lineageUrl, lineageInstall, lineageInstallUrl, normModel, normVendor, isQualifier } from "../src/sources/lineageos.ts";
 
 const D = "2026-10-17";
 
@@ -112,4 +112,51 @@ test("carrier variants merge into one record with all model numbers", () => {
   assert.equal(s3.projects!.length, 2);
   assert.ok(s3.aliases!.includes("Galaxy S III (AT&T)"));
   assert.equal(f.records.find((r) => r.id === "lenovo/vibe-k5-plus")!.projects![0].url, "https://wiki.lineageos.org/devices/A6020/variant2/");
+});
+
+test("install route from install_method", () => {
+  assert.equal(lineageInstallUrl("bluejay"), "https://wiki.lineageos.org/devices/bluejay/install/");
+  assert.equal(lineageInstallUrl("A6020", 1), "https://wiki.lineageos.org/devices/A6020/install/variant1/");
+
+  const p6a = fromDevice(parseDeviceYaml(BLUEJAY + "install_method: fastboot_nexus\n"), D)!;
+  assert.deepEqual(validate(p6a), []);
+  assert.equal(p6a.install!.length, 1);
+  const r = p6a.install![0];
+  assert.equal(r.project, "LineageOS");
+  assert.equal(r.method, "usb-bootloader");
+  assert.equal(r.guide, "https://wiki.lineageos.org/devices/bluejay/install/");
+  assert.equal(r.difficulty, "medium");
+  assert.deepEqual(r.tools, ["Computer with adb and fastboot", "USB cable"]);
+  assert.equal(r.reversible, "partial");
+  assert.match(r.notes!, /bootloader must be unlocked/);
+  assert.match(r.notes!, /wipes all data/);
+  assert.doesNotMatch(r.notes!, /No longer maintained/);
+
+  // Samsung: Download mode; unmaintained device: build it yourself
+  const s9 = fromDevice(parseDeviceYaml(STARLTE + "install_method: samloader_rs\n"), D)!;
+  const s = s9.install![0];
+  assert.equal(s.method, "usb-bootloader");
+  assert.deepEqual(s.tools, ["Computer with adb and samloader-rs", "USB cable"]);
+  assert.match(s.notes!, /^No longer maintained/);
+  assert.match(s.notes!, /Download mode/);
+
+  const xiaomi = lineageInstall({ codename: "lmi", install_method: "fastboot_xiaomi", maintainers: ["x"] });
+  assert.match(xiaomi.notes!, /Mi Unlock/);
+  const dd = lineageInstall({ codename: "x", install_method: "dd", maintainers: ["x"] });
+  assert.equal(dd.method, "other");
+  assert.match(dd.notes!, /rooted first/);
+  assert.equal(dd.reversible, undefined);
+  const sw = lineageInstall({ codename: "nx", install_method: "nintendo", maintainers: ["x"] });
+  assert.equal(sw.method, "other");
+  assert.match(sw.firmware_constraints!, /first-revision/);
+  assert.equal(lineageInstall({ codename: "y", maintainers: ["x"] }).method, "other");
+
+  // variants keep their own install page through the merge
+  const v1 = fromDevice({ vendor: "Lenovo", name: "Vibe K5 Plus", codename: "A6020", variant: 1, type: "phone", maintainers: [], install_method: "fastboot_unlocked" }, D)!;
+  const v2 = fromDevice({ vendor: "Lenovo", name: "Vibe K5 Plus", codename: "A6020", variant: 2, type: "phone", maintainers: [], install_method: "fastboot_unlocked" }, D)!;
+  const merged = finalize([v1, v2]).records[0];
+  assert.deepEqual(merged.install!.map((i) => i.guide), [
+    "https://wiki.lineageos.org/devices/A6020/install/variant1/",
+    "https://wiki.lineageos.org/devices/A6020/install/variant2/",
+  ]);
 });

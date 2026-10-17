@@ -5,7 +5,7 @@
 // Z-Wave product ids have no field of their own in the schema: they are stored in
 // identifiers.sku as "zwave:<manufacturerId>:<productType>:<productId>" so they are searchable.
 // Z-Wave is a published standard; Z-Wave JS is the open driver that controls these devices.
-import { makeId, today, type DeviceRecord } from "@opendevicedb/core";
+import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
 import { clean, firstMatch, githubFiles, githubRaw, mapLimit, type Source } from "../lib.ts";
 
 const REPO = "zwave-js/zwave-js", BRANCH = "master";
@@ -138,6 +138,36 @@ export function conditional(v: unknown): { default: string; variants: { value: s
 /** "YRL226 / YRL256" → ["YRL226", "YRL256"]; a slash without spaces ("FGWPA/B-111") is kept. */
 export const labelVariants = (label: string) => label.split(/\s+\/\s+/).map(clean).filter(Boolean);
 
+// ---------- install route (SPEC R1) ----------
+
+const DB_BROWSER = "https://devices.zwave-js.io/";
+const QUICK_START = "https://zwave-js.github.io/zwave-js-ui/#/getting-started/quick-start";
+
+/**
+ * Page of one product in the Z-Wave JS config DB browser, which shows the inclusion
+ * (pairing) steps from the device file. Its share links are
+ * ?jumpTo=<manufacturerId>:<productType>:<productId>:<firmware>, any firmware version
+ * in the file's range selecting it (the browser shares the range minimum).
+ */
+export const zwaveDbPage = (mid: string, pt: string, pid: string, fw = "0.0") => `${DB_BROWSER}?jumpTo=${mid}:${pt}:${pid}:${fw}`;
+
+/** Firmware version as the DB browser compares it ("1.10"), or "0.0" when absent/odd. */
+const fwMin = (v: unknown) => (typeof v === "string" && /^\d+\.\d+$/.test(v.trim()) ? v.trim() : "0.0");
+
+/** Nothing is flashed: the device is included in the Z-Wave network of a Z-Wave JS controller. */
+export function zwaveInstall(guide: string): InstallRoute {
+  return {
+    project: "Z-Wave JS",
+    method: "pairing",
+    guide,
+    difficulty: "medium",
+    tools: ["Z-Wave USB controller (same frequency region as the device)", "Computer or Raspberry Pi running Z-Wave JS (e.g. Z-Wave JS UI)"],
+    brick_risk: "none",
+    reversible: "yes",
+    notes: "No flashing: the device keeps its firmware and is included in your own Z-Wave network; exclude it to undo.",
+  };
+}
+
 /** One device file → records (one, or one per productId-conditional label). */
 export function fromDeviceFile(path: string, json: any, date = today()): DeviceRecord[] {
   const dir = path.match(DEVICE_FILE)?.[1];
@@ -163,8 +193,10 @@ export function fromDeviceFile(path: string, json: any, date = today()): DeviceR
   const rest = devices.filter((d) => !bound.has(d.pid));
   if (rest.length || !groups.length) groups.push({ label: label.default, devices: rest, extra: otherVariants });
 
+  const fw = fwMin(json.firmwareVersion?.min);
   return groups.map((g) => {
     const variants = labelVariants(g.label);
+    const first = g.devices[0];
     const model = variants[0];
     return {
       id: makeId(vendor, model),
@@ -180,6 +212,7 @@ export function fromDeviceFile(path: string, json: any, date = today()): DeviceR
       summary: description ? `${description} (Z-Wave).` : undefined,
       interfaces: [{ name: "Z-Wave", transport: "zwave", status: "documented", spec: url }],
       projects: [{ name: "Z-Wave JS device config", url, kind: "driver", license: "MIT" }],
+      install: [zwaveInstall(first ? zwaveDbPage(mid, first.pt, first.pid, fw) : QUICK_START)],
       provenance: { sources: ["zwave-js"] },
       updated: date,
     } as DeviceRecord;

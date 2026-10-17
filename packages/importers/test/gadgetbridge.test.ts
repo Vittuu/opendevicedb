@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { validate, type DeviceRecord } from "@opendevicedb/core";
 import {
-  parseDeviceSupport, parseGadgetPage, splitGadget, gadgetCategory, gadgetStatus, fromGadget,
+  parseDeviceSupport, parseGadgetPage, splitGadget, gadgetCategory, gadgetStatus, fromGadget, gadgetInstall,
   deviceTypeCoordinators, deviceTypeNames, stringConstants, parseCoordinator, coordinatorBleNames,
   literalPrefix, regexAlternatives, bleNamesFromRegex, attachBleNames,
 } from "../src/sources/gadgetbridge.ts";
@@ -78,6 +78,11 @@ test("gadget → record with anchored page link and protocol doc", () => {
       { name: "Gadgetbridge", url: "https://gadgetbridge.org/gadgets/wearables/fitpro/#device__fitpro_m6", kind: "integration", license: "AGPL-3.0" },
       { name: "Gadgetbridge protocol notes", url: "https://gadgetbridge.org/internals/specifics/fitpro-protocol/", kind: "protocol-doc", license: "AGPL-3.0" },
     ],
+    install: [{
+      project: "Gadgetbridge", method: "pairing", guide: "https://gadgetbridge.org/gadgets/wearables/fitpro/#device__fitpro_m6",
+      installer: "https://f-droid.org/packages/nodomain.freeyourgadget.gadgetbridge/", difficulty: "easy",
+      tools: ["Android phone with the Gadgetbridge app"], brick_risk: "none", reversible: "yes",
+    }],
     provenance: { sources: ["gadgetbridge"] }, updated: D,
   });
   assert.equal(fromGadget({ ...fitpro, key: "missing" }, "fitpro", p, D), null);
@@ -155,4 +160,25 @@ test("a family coordinator's names go to the records they spell", () => {
   const rs = [rec("Watch GT 3"), rec("Watch GT 3 Pro"), rec("Watch GT 3 SE")];
   attachBleNames(rs, [{ display: "Huawei Watch GT 3 (Pro)", names: ["huawei watch gt 3-", "huawei watch gt 3 pro-", "huawei watch gt 3 se-", "HWGT3"] }]);
   assert.deepEqual(rs.map((r) => r.identifiers?.ble_names), [["huawei watch gt 3-"], ["huawei watch gt 3 pro-", "HWGT3"], ["huawei watch gt 3 se-"]]);
+});
+
+test("gadgetbridge install route: pairing, with the vendor-app step the pair_* flag names", () => {
+  const g = "https://gadgetbridge.org/gadgets/wearables/xiaomi/#device__x";
+  const free = gadgetInstall(["feature_high", "pair_free"], g);
+  assert.equal(free.method, "pairing");
+  assert.equal(free.difficulty, "easy");
+  assert.equal(free.guide, g);
+  assert.equal(free.notes, undefined);
+  const huami = gadgetInstall(["feature_most", "pair_huami", "os_zepp"], g);
+  assert.equal(huami.difficulty, "medium");
+  assert.match(huami.notes!, /authentication key: https:\/\/gadgetbridge\.org\/basics\/pairing\/huami-xiaomi-server\//);
+  assert.match(gadgetInstall(["pair_xiaomi"], g).notes!, /Mi Fitness/);
+  assert.match(gadgetInstall(["pair_fossil"], g).notes!, /fossil-server/);
+  assert.equal(gadgetInstall(["pair_connect_once"], g).difficulty, "easy");
+  const unknown = gadgetInstall(["feature_unknown", "pair_unknown"], g);
+  assert.equal(unknown.difficulty, "medium");
+  assert.match(unknown.notes!, /not documented/);
+  for (const r of [free, huami, unknown]) {
+    assert.deepEqual(validate({ id: "a/b", vendor: "A", model: "B", category: "wearable", status: "controllable", install: [r], updated: D }), []);
+  }
 });

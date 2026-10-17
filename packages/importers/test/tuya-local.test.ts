@@ -135,3 +135,20 @@ test("tuya-local reads the head of a config whose DP mappings do not parse", () 
   assert.equal(c.entity, "climate");
   assert.equal(c.products[0].model, "InverPro");
 });
+
+test("tuya-local install route: local control from Home Assistant, stock firmware", () => {
+  const recs = fromConfigs(configs(), D);
+  for (const r of recs) {
+    assert.equal(r.install!.length, 1);
+    assert.deepEqual(validate(r), [], JSON.stringify(r));
+  }
+  const i = recs[0].install![0];
+  assert.equal(i.project, "tuya-local");
+  assert.equal(i.method, "host-software");
+  assert.equal(i.guide, "https://github.com/make-all/tuya-local");
+  assert.equal(i.difficulty, "medium");
+  assert.equal(i.brick_risk, "none");
+  assert.equal(i.reversible, "yes");
+  assert.match(i.notes!, /local key/);
+  assert.notEqual(recs[0].install![0].tools, recs[1].install![0].tools, "records do not share mutable lists");
+});

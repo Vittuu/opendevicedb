@@ -14,7 +14,7 @@
 //
 // The vendor and model normalisation below is exported and shared with the postmarketOS
 // importer so that the same phone gets the same id in both sources.
-import { makeId, today, type DeviceRecord } from "@opendevicedb/core";
+import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
 import { clean, firstMatch, githubFiles, githubRaw, mapLimit, type Source } from "../lib.ts";
 import YAML from "yaml";
 
@@ -120,6 +120,67 @@ export const lineageCategory = (type: unknown) => firstMatch(LINEAGE_TYPES, clea
 export const lineageUrl = (codename: string, variant?: unknown) =>
   `https://wiki.lineageos.org/devices/${encodeURIComponent(codename)}/${variant != null ? `variant${clean(variant)}/` : ""}`;
 
+// ---------- install route (SPEC R1) ----------
+
+/** The wiki's per-device install page (exists for every device file, maintained or not). */
+export const lineageInstallUrl = (codename: string, variant?: unknown) =>
+  `https://wiki.lineageos.org/devices/${encodeURIComponent(codename)}/install/${variant != null ? `variant${clean(variant)}/` : ""}`;
+
+const WIPE = "Installing wipes all data on the device: back it up first.";
+const UNLOCK = "The bootloader must be unlocked first, which also wipes the device; some vendors make you request an unlock code or wait before unlocking.";
+
+/**
+ * Install route from the device file's `install_method`, which selects the wiki's
+ * recovery_install_<method> template: fastboot_* (unlocked bootloader + fastboot),
+ * samloader_rs (Samsung Download mode), dd/oor (root the stock system, then write the
+ * recovery from the device), apx (NVIDIA Tegra RCM), amlogic_update (Amlogic burn mode),
+ * edl_custom (Qualcomm EDL), nintendo (Switch: RCM jig or modchip).
+ * Every route ends in a full wipe. Going back to stock is possible with the vendor's
+ * factory image but not always complete (data lost, some devices keep a tripped
+ * "unlocked" flag such as Samsung Knox), hence reversible "partial" for the bootloader
+ * routes. No brick risk is given: it depends on the device and on following the steps.
+ */
+export function lineageInstall(d: Record<string, any>): InstallRoute {
+  const route = lineageRoute(d);
+  // Without maintainers the wiki's steps tell you to build LineageOS yourself.
+  const maintained = Array.isArray(d.maintainers) && d.maintainers.length > 0;
+  if (!maintained) route.notes = `No longer maintained: there are no official builds, the guide has you build LineageOS from source. ${route.notes ?? ""}`.trim();
+  const { project, method, guide, difficulty, ...rest } = route; // schema field order in snapshots
+  return { project, method, guide, difficulty, ...rest };
+}
+
+function lineageRoute(d: Record<string, any>): InstallRoute {
+  const codename = clean(d.codename);
+  const method = clean(d.install_method);
+  const base = { project: "LineageOS", guide: lineageInstallUrl(codename, d.variant), difficulty: "medium" as const };
+  const usb = "USB cable";
+  if (method.startsWith("fastboot")) {
+    const xiaomi = method.startsWith("fastboot_xiaomi") ? " Xiaomi devices are unlocked with Xiaomi's Mi Unlock tool." : "";
+    return { ...base, method: "usb-bootloader", tools: ["Computer with adb and fastboot", usb], reversible: "partial", notes: `${UNLOCK}${xiaomi} ${WIPE}` };
+  }
+  switch (method) {
+    case "samloader_rs":
+      return { ...base, method: "usb-bootloader", tools: ["Computer with adb and samloader-rs", usb], reversible: "partial", notes: `Uses Samsung's Download mode; OEM unlock must be enabled in Developer options where the device has it. ${WIPE}` };
+    case "dd":
+    case "oor":
+      return { ...base, method: "other", tools: ["Computer with adb", usb], notes: `The stock system must be rooted first; the recovery is then written from the device itself. ${WIPE}` };
+    case "apx":
+      return { ...base, method: "usb-bootloader", tools: ["Linux computer (not a VM) with Python 3 for NVIDIA Tegraflash", usb], notes: `Uses NVIDIA's recovery mode (RCM/APX). ${WIPE}` };
+    case "amlogic_update":
+      return { ...base, method: "usb-bootloader", tools: ["Linux computer with Amlogic's update tool", usb], notes: `Uses Amlogic's burn mode. ${WIPE}` };
+    case "edl_custom":
+      return { ...base, method: "usb-bootloader", tools: ["Computer with adb and an EDL flashing tool", usb], notes: `Uses Qualcomm's emergency download mode (EDL). ${WIPE}` };
+    case "nintendo":
+      return {
+        ...base, method: "other", tools: ["RCM jig or a modchip", "microSD card", "Computer"],
+        firmware_constraints: "Without a modchip only exploitable first-revision (v1) Switch consoles can boot it; other models need a modchip, which means opening and soldering.",
+        notes: "Boots through the Hekate bootloader, from the SD card or the internal storage.",
+      };
+    default: // no or unknown install_method: the wiki page still has the steps
+      return { ...base, method: "other", notes: WIPE };
+  }
+}
+
 /** One device YAML (parsed) → record, or null when vendor/name/codename is missing. */
 export function fromDevice(d: Record<string, any> | null, date = today()): DeviceRecord | null {
   if (!d || typeof d !== "object") return null;
@@ -139,6 +200,7 @@ export function fromDevice(d: Record<string, any> | null, date = today()): Devic
     identifiers: { sku: models, chips: [clean(d.soc)] },
     status: "open-firmware",
     projects: [{ name: `${label} (${codename}${d.variant != null ? ` variant ${clean(d.variant)}` : ""})`, url: lineageUrl(codename, d.variant), kind: "firmware", license: "Apache-2.0" }],
+    install: [lineageInstall(d)],
     provenance: { sources: ["lineageos"] },
     updated: date,
   };

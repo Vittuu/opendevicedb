@@ -8,7 +8,7 @@
 // lists elsewhere and is followed by a model code ("goldair_gpcv405_heater"), else they
 // are skipped (no "Generic" records). Category from the device name, then the primary entity.
 import YAML from "yaml";
-import { makeId, today, type DeviceRecord } from "@opendevicedb/core";
+import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
 import { clean, firstMatch, githubFiles, githubRaw, mapLimit, type Source } from "../lib.ts";
 
 const REPO = "make-all/tuya-local", BRANCH = "main";
@@ -128,6 +128,22 @@ export function modelName(vendor: string, model: string): string {
   return m.replace(/\s*\([^)]*(°|firmware|variant|based on|mapped)[^)]*\)$/i, "") || m;
 }
 
+/**
+ * Install route (SPEC R1): nothing changes on the device, which keeps its stock firmware;
+ * tuya-local runs in Home Assistant and needs the device id and local key (filled in from
+ * the Tuya cloud during setup, or found with the steps of DEVICE_DETAILS.md).
+ */
+export const TUYA_LOCAL_INSTALL: InstallRoute = {
+  project: "tuya-local",
+  method: "host-software",
+  guide: `https://github.com/${REPO}`,
+  difficulty: "medium",
+  tools: ["Home Assistant (tuya-local is installed through HACS)", "Tuya / Smart Life app account (to get the device's local key)"],
+  brick_risk: "none",
+  reversible: "yes",
+  notes: "No flashing: set the device up in the Tuya or Smart Life app first; tuya-local then controls it on your network with its device id and local key. Re-pairing in the app changes the local key.",
+};
+
 const fileUrl = (file: string) => `https://github.com/${REPO}/blob/${BRANCH}/${DIR}${encodeURIComponent(file)}`;
 
 /** Records of one config (one per product and brand). `brands` comes from brandSpellings. */
@@ -159,6 +175,7 @@ export function fromConfig(c: TuyaConfig, brands: Map<string, string>, date = to
         status: "controllable",
         summary: `${name}, controlled locally over the Tuya protocol by tuya-local (stock firmware, no cloud).`,
         projects: [{ name: "tuya-local", url: fileUrl(c.file), kind: "integration", license: "MIT" }],
+        install: [{ ...TUYA_LOCAL_INSTALL, tools: [...TUYA_LOCAL_INSTALL.tools!] }],
         provenance: { sources: ["tuya-local"] },
         updated: date,
       });

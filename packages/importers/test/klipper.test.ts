@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { validate, type DeviceRecord } from "@opendevicedb/core";
 import { finalize } from "../src/lib.ts";
-import { printerVendor, canonModel, prettyBoard, headerChips, parseConfigName, parseBoardName, fromConfig } from "../src/sources/klipper.ts";
+import { printerVendor, canonModel, prettyBoard, headerChips, parseConfigName, parseBoardName, fromConfig, klipperFlashMethod } from "../src/sources/klipper.ts";
 
 const D = "2026-10-17";
 const allValid = (rs: DeviceRecord[]) => {
@@ -69,6 +69,11 @@ test("klipper configs → records, year variants merge", () => {
     summary: "Klipper ships a config for this printer (config/printer-creality-cr10-2017.cfg); its controller board is flashed with the Klipper firmware (MCU: ATmega1284P).",
     identifiers: { chips: ["ATmega1284P"] }, status: "open-firmware",
     projects: [{ name: "Klipper (printer-creality-cr10-2017.cfg)", url: "https://github.com/Klipper3d/klipper/blob/master/config/printer-creality-cr10-2017.cfg", kind: "firmware", license: "GPL-3.0" }],
+    install: [{
+      project: "Klipper", method: "usb-bootloader", guide: "https://www.klipper3d.org/Installation.html", difficulty: "medium",
+      tools: ["Raspberry Pi or other Linux computer (runs the Klipper host)", "USB cable"], brick_risk: "low", reversible: "partial",
+      notes: "Board-specific build and flashing steps are in the header of config/printer-creality-cr10-2017.cfg. Going back needs the vendor's stock firmware file, when the vendor publishes it.",
+    }],
     provenance: { sources: ["klipper"] }, updated: D,
   });
   assert.equal(board[0].id, "bigtreetech/skr-mini-e3-v2-0");
@@ -78,4 +83,24 @@ test("klipper configs → records, year variants merge", () => {
   assert.deepEqual(f.records[0].aliases, ["M2 (2012)", "M2 (2016)"]);
   assert.equal(f.records[0].projects!.length, 2);
   assert.deepEqual(fromConfig("config/generic-simulavr.cfg", "# simulavr\n", D), []);
+});
+
+test("klipper install route: SD card or USB bootloader from the header, else the MCU", () => {
+  const sd = `# Creality Ender-3 V2. Compile for the STM32F103 with a "28KiB bootloader".\n# Copy out/klipper.bin to an SD card and turn on the printer with the card inserted.\n[mcu]\n`;
+  assert.equal(klipperFlashMethod(sd, headerChips(sd)), "sd-card");
+  const bin = `# compiled for the STM32F103. The firmware filename must end in ".bin"\n`;
+  assert.equal(klipperFlashMethod(bin, headerChips(bin)), "sd-card");
+  const dfu = `# select the STM32F401 with "No bootloader". To flash, run:\n#   make flash FLASH_DEVICE=/dev/serial/by-id/usb-Klipper_stm32f401xc_*-if00\n`;
+  assert.equal(klipperFlashMethod(dfu, headerChips(dfu)), "usb-bootloader");
+  assert.equal(klipperFlashMethod(CR10, headerChips(CR10)), "usb-bootloader", "AVR boards: USB");
+  assert.equal(klipperFlashMethod("# compiled for the LPC1768.\n", ["LPC1768"]), "sd-card");
+  assert.equal(klipperFlashMethod("# Smoothieboard, compiled for the LPC176x.\n", []), "sd-card");
+  assert.equal(klipperFlashMethod("# compiled for the SAM4E8E.\n", ["SAM4E8E"]), "usb-bootloader");
+  assert.equal(klipperFlashMethod("# a kit\n", []), "usb-bootloader", "unknown MCU: the guide's make flash");
+  assert.equal(klipperFlashMethod("[mcu]\n# copy to the SD card\n", []), "usb-bootloader", "only the header comment counts");
+  const [r] = fromConfig("config/printer-creality-ender3-v2-2020.cfg", sd, D);
+  allValid([r]);
+  assert.equal(r.install![0].method, "sd-card");
+  assert.ok(r.install![0].tools!.includes("microSD card"));
+  assert.match(r.install![0].notes!, /config\/printer-creality-ender3-v2-2020\.cfg/);
 });

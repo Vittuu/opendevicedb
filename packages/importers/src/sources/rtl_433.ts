@@ -14,7 +14,7 @@
 // car keys and keyfobs with rolling or encrypted codes, thermostats and heating controls
 // (their receiver is not driven), alarm systems, bidirectional devices, and decoders whose
 // own comment says the payload is undecoded or unconfirmed.
-import { makeId, today, type DeviceRecord } from "@opendevicedb/core";
+import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
 import { clean, firstMatch, githubFiles, githubRaw, mapLimit, type Source } from "../lib.ts";
 
 const REPO = "merbanan/rtl_433", BRANCH = "master";
@@ -455,6 +455,21 @@ export function rtlStatus(d: Decoder, category: string): "controllable" | "parti
 
 // ---------- records ----------
 
+/**
+ * Install route (SPEC R1): rtl_433 runs on a computer with a cheap SDR receiver and decodes
+ * what the device transmits; nothing changes on the device.
+ */
+export const RTL_433_INSTALL: InstallRoute = {
+  project: "rtl_433",
+  method: "host-software",
+  guide: `https://github.com/${REPO}`,
+  difficulty: "medium",
+  tools: ["RTL-SDR USB receiver (or another SDR rtl_433 supports)"],
+  brick_risk: "none",
+  reversible: "yes",
+  notes: "Receive only: rtl_433 decodes the radio messages the device sends; it does not change or command the device.",
+};
+
 export function fromDecoderFile(path: string, text: string, date = today()): DeviceRecord[] {
   if (!DECODER_FILE.test(path)) return [];
   const file = path.split("/").pop()!;
@@ -475,6 +490,7 @@ export function fromDecoderFile(path: string, text: string, date = today()): Dev
         summary: `Radio protocol decoded by rtl_433 as "${d.name}".`,
         interfaces: [{ name: "433/868/915 MHz radio", transport: "rf", status: status === "controllable" ? "documented" : "partial", spec: url }],
         projects: [{ name: `rtl_433 decoder ${file}`, url, kind: "driver", license: LICENSE }],
+        install: [{ ...RTL_433_INSTALL, tools: [...RTL_433_INSTALL.tools!] }],
         provenance: { sources: ["rtl_433"] },
         updated: date,
       } as DeviceRecord);

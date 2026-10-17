@@ -16,7 +16,7 @@
 // Status is taken from what the driver can do with the camera: remote capture/configuration
 // (ptp2 flag PTP_CAP, canon CAP_SUP, every sierra camera) → controllable; file download only
 // → partial-protocol.
-import { makeId, today, type DeviceRecord } from "@opendevicedb/core";
+import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
 import { clean, githubRaw, type Source } from "../lib.ts";
 
 const REPO = "gphoto/libgphoto2", BRANCH = "master";
@@ -188,6 +188,23 @@ const CAMLIBS = {
 } as const;
 export type Camlib = keyof typeof CAMLIBS;
 
+/**
+ * Install route (SPEC R1): nothing changes on the camera; gphoto2 (or a program built on
+ * libgphoto2) on the computer talks to it. Serial-only cameras need their serial cable.
+ */
+export function gphotoInstall(usb: boolean): InstallRoute {
+  return {
+    project: "libgphoto2",
+    method: "host-software",
+    guide: "http://www.gphoto.org/doc/manual/",
+    difficulty: usb ? "easy" : "medium",
+    tools: [usb ? "USB cable" : "The camera's serial or USB cable"],
+    brick_risk: "none",
+    reversible: "yes",
+    notes: "Nothing is installed on the camera: gphoto2 or a program built on libgphoto2 (photo managers, tethering tools) talks to it from your computer.",
+  };
+}
+
 export function fromEntry(camlib: Camlib, e: CamEntry, date = today()): DeviceRecord | null {
   const vendor = normaliseVendor(e.vendor);
   const model = normaliseModel(vendor, e.model);
@@ -210,6 +227,7 @@ export function fromEntry(camlib: Camlib, e: CamEntry, date = today()): DeviceRe
       notes: e.capture ? "libgphoto2: file access, remote capture and configuration" : "libgphoto2: file listing and download only",
     }],
     projects: [{ name: lib.project, url: `https://github.com/${REPO}/blob/${BRANCH}/${lib.path}`, kind: "driver", license: LICENSE }],
+    install: [gphotoInstall(transport === "usb")],
     provenance: { sources: ["libgphoto2"] },
     updated: date,
   };

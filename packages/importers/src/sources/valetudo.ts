@@ -6,7 +6,7 @@
 // Valetudo is not a firmware: after rooting, it runs on the robot's stock OS and replaces the
 // vendor cloud and app with local control (web UI, REST, MQTT/Home Assistant). So the status is
 // controllable and the project kind is integration.
-import { makeId, today, type DeviceRecord } from "@opendevicedb/core";
+import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
 import { clean, githubRaw, type Source } from "../lib.ts";
 
 const REPO = "Hypfer/Valetudo", BRANCH = "master";
@@ -94,6 +94,42 @@ export const robotBrand = (section: string) => BRANDS[section.toLowerCase()] ?? 
 export const modelCodes = (name: string) =>
   name.split(/[\s,()]+/).filter((t) => /^(?=.*\d)(?=.*[A-Z])[A-Z0-9][A-Z0-9-]{5,}$/.test(t));
 
+// ---------- install routes (SPEC R1) ----------
+
+type Way = Omit<InstallRoute, "project" | "guide">;
+const UART = "USB-serial adapter (3.3 V)";
+/**
+ * Rooting method pages of the Valetudo docs (and Hypfer's CRL-200S repository) → route.
+ * Facts are the ones those pages state: requirements, disassembly, brick warnings.
+ * Links elsewhere (third-party gists) get no route. Rooting keeps the vendor's OS, and no
+ * page documents a way back, so reversibility is not given.
+ */
+export const ROOTING_WAYS: [RegExp, Way][] = [
+  [/\/installation\/roborock\/#ota$/, { method: "ota-exploit", difficulty: "medium", tools: ["Laptop with Wi-Fi"], opens_device: false, notes: "Over the robot's own Wi-Fi access point; no disassembly, no cables." }],
+  [/\/installation\/roborock\/#fel-rooting$/, { method: "usb-bootloader", difficulty: "hard", tools: ["Laptop running Linux natively with sunxi-tools", "Micro USB cable"], opens_device: true, notes: "Full disassembly to reach a test point under the mainboard, breaking the warranty seals; no soldering." }],
+  [/\/installation\/roborock\/#(vinda|init-override)$/, { method: "serial", difficulty: "hard", tools: [UART, "Soldering iron"], opens_device: true, notes: "Full disassembly and soldering wires to test points; voids the warranty." }],
+  [/\/installation\/dreame\/#uart-shell$/, { method: "serial", difficulty: "hard", tools: [UART, "Dreame Breakout PCB", "USB stick"], notes: "Through the robot's debug connector with the Dreame Breakout PCB; on robots with secure boot it must be defeated first or the robot is bricked." }],
+  [/\/installation\/dreame\/#fastboot$/, { method: "usb-bootloader", difficulty: "hard", tools: ["Dreame Breakout PCB", "Micro USB cable", "Laptop running Debian 13 natively"], brick_risk: "high", notes: "Through the robot's debug connector with the Dreame Breakout PCB; Valetudo warns this method can permanently brick the robot." }],
+  [/\/installation\/midea\/#adb$/, { method: "other", difficulty: "hard", tools: ["Plastic pry tool", "Micro USB cable", "Computer with adb"], opens_device: true, brick_risk: "high", notes: "ADB over a micro USB port reached by prying the robot open; Valetudo warns this method can permanently brick the robot." }],
+  [/^https:\/\/github\.com\/Hypfer\/valetudo-crl200s-root\/?$/, { method: "other", difficulty: "medium", tools: ["Micro USB data cable", "Computer with adb"], brick_risk: "high", notes: "ADB over the robot's micro USB port; the guide lists models that rooting bricks and warns of unfixable bricks." }],
+];
+
+/** Routes from the robot's rooting links; the link label's "(…)" (e.g. "before 2020-03") is a constraint. */
+export function valetudoInstall(r: Robot): InstallRoute[] {
+  const out: InstallRoute[] = [];
+  for (const l of r.rooting) {
+    const way = ROOTING_WAYS.find(([re]) => re.test(l.url))?.[1];
+    if (!way) continue;
+    const cond = l.name.match(/\(([^)]+)\)/)?.[1];
+    out.push({
+      project: "Valetudo", method: way.method, guide: l.url, ...way,
+      ...(way.tools ? { tools: [...way.tools] } : {}),
+      ...(cond ? { firmware_constraints: `Valetudo qualifies this method: "${clean(cond)}".` } : {}),
+    });
+  }
+  return out;
+}
+
 export function fromRobot(r: Robot, date = today()): DeviceRecord | null {
   const vendor = robotBrand(r.brand);
   const lower = r.heading.toLowerCase();
@@ -119,6 +155,7 @@ export function fromRobot(r: Robot, date = today()): DeviceRecord | null {
       { name: "Valetudo", url: `${PAGE_URL}#${r.anchor}`, kind: "integration", license: "Apache-2.0" },
       ...r.rooting.map((l) => ({ name: `Valetudo rooting instructions (${l.name})`, url: l.url, kind: "other" as const })),
     ],
+    install: valetudoInstall(r),
     provenance: { sources: ["valetudo"] },
     updated: date,
   };

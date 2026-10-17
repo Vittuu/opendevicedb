@@ -106,6 +106,7 @@ test("openwrt mapping and parsing", () => {
     id: "tp-link/archer-c7-v5", vendor: "TP-Link", model: "Archer C7 v5", category: "router",
     identifiers: { chips: ["Qualcomm Atheros QCA9563"], fcc_id: ["TE7C7V5"] }, status: "open-firmware",
     projects: [{ name: "OpenWrt", url: "https://openwrt.org/toh/tp-link/archer_c7", kind: "firmware", license: "GPL-2.0" }],
+    install: records[0].install, // routes: see openwrt.test.ts
     provenance: { sources: ["openwrt"] }, updated: D,
   });
   assert.equal(records[1].projects![0].url, "https://openwrt.org/toh/hwdata/foo/bar");

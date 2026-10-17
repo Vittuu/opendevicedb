@@ -2,7 +2,7 @@
 // github.com/themactep/thingino-firmware/configs/cameras/<profile>/<profile>_defconfig,
 // whose first line is "# NAME: <Brand> <Model> (<SoC>, <sensor>, <wifi>…)".
 // Variants of the same camera are merged into one record.
-import { makeId, today, type DeviceRecord } from "@opendevicedb/core";
+import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
 import { clean, githubFiles, githubRaw, mapLimit, type Source } from "../lib.ts";
 
 const REPO = "themactep/thingino-firmware", BRANCH = "master";
@@ -29,6 +29,33 @@ export function parseCameraName(profile: string, name: string): { vendor: string
   return { vendor, model, hardware };
 }
 
+// ---------- install route (SPEC R1) ----------
+
+export const THINGINO_GUIDE = "https://github.com/themactep/thingino-firmware/wiki/Installation:-General";
+
+/**
+ * The camera profiles say nothing about how a given camera is flashed, and the per-camera wiki
+ * pages are not named after the profiles, so every camera gets the one route that works on
+ * all of them: the project's general installation page, programming the SPI flash chip with
+ * a CH341A (in place with a clip, or off-board), listed there as the most reliable method.
+ * Easier ways (SD card with a magic file name, USB cloner, serial) depend on the camera and
+ * are mentioned in the notes. With a backup of the stock flash taken first, the programmer
+ * also writes it back.
+ */
+export const THINGINO_INSTALL: InstallRoute = {
+  project: "thingino",
+  method: "spi-programmer",
+  guide: THINGINO_GUIDE,
+  difficulty: "hard",
+  tools: ["SPI flash programmer (CH341A)", "SOIC-8 test clip"],
+  opens_device: true,
+  reversible: "yes",
+  notes: "Back up the stock flash first. Some cameras can instead be flashed without opening them, from an SD card or over USB with the Ingenic cloner, or through a serial console: see the guide and the camera's wiki page, if it has one.",
+};
+
+/** Cameras that are part of a mains-wired light (floodlight, bulb, lamp socket). */
+const MAINS = /\b(floodlight|flood light|bulb|lamp)\b/i;
+
 export function fromDefconfig(path: string, text: string, date = today()): DeviceRecord | null {
   const profile = path.match(DEFCONFIG)?.[1];
   const name = text.match(/^# NAME:\s*(.+)$/m)?.[1];
@@ -43,6 +70,8 @@ export function fromDefconfig(path: string, text: string, date = today()): Devic
     identifiers: { chips: p.hardware },
     status: "open-firmware",
     projects: [{ name: `thingino (${p.hardware.join(", ") || profile})`, url: `https://github.com/${REPO}/tree/${BRANCH}/configs/cameras/${profile}`, kind: "firmware", license: "MIT" }],
+    // Safety (SPEC R1): no guided route for cameras built into mains-wired lights.
+    install: MAINS.test(p.model) ? [] : [{ ...THINGINO_INSTALL, tools: [...THINGINO_INSTALL.tools!] }],
     provenance: { sources: ["thingino"] },
     updated: date,
   };

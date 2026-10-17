@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { validate, type DeviceRecord } from "@opendevicedb/core";
 import { finalize } from "../src/lib.ts";
-import { parseJsonc, zwaveVendor, zwaveCategory, conditional, labelVariants, fromDeviceFile } from "../src/sources/zwave-js.ts";
+import { parseJsonc, zwaveVendor, zwaveCategory, conditional, labelVariants, fromDeviceFile, zwaveDbPage } from "../src/sources/zwave-js.ts";
 
 const D = "2026-10-17";
 const DIR = "packages/config/config/devices";
@@ -102,4 +102,35 @@ test("zwave-js skips templates and files without a label; duplicates merge", () 
   assert.equal(f.merged, 1);
   assert.equal(f.records[0].projects!.length, 2);
   assert.deepEqual(f.records[0].identifiers!.sku, ["ZDW103", "zwave:0x0001:0x4457:0x3033", "zwave:0x0001:0x4457:0x3034"]);
+});
+
+test("zwave-js install route: pairing, guided by the product's page in the config DB browser", () => {
+  const [r] = fromDeviceFile(`${DIR}/0x0129/yrl226.json`, {
+    manufacturer: "Yale", manufacturerId: "0x0129", label: "YRL226", firmwareVersion: { min: "1.10", max: "255.255" },
+    devices: [{ productType: "0x8002", productId: "0x0600" }],
+  }, D);
+  allValid([r]);
+  assert.equal(r.install!.length, 1);
+  const i = r.install![0];
+  assert.equal(i.project, "Z-Wave JS");
+  assert.equal(i.method, "pairing");
+  assert.equal(i.guide, "https://devices.zwave-js.io/?jumpTo=0x0129:0x8002:0x0600:1.10");
+  assert.equal(i.difficulty, "medium");
+  assert.equal(i.brick_risk, "none");
+  assert.equal(i.reversible, "yes");
+  assert.ok(i.tools!.some((t) => /Z-Wave USB controller/.test(t)));
+  assert.equal(zwaveDbPage("0x0001", "0x4457", "0x3033"), "https://devices.zwave-js.io/?jumpTo=0x0001:0x4457:0x3033:0.0");
+  // productId-bound labels link to their own product
+  const recs = fromDeviceFile(`${DIR}/0x0463/yrd4x0-f-zw4.json`, {
+    manufacturer: "Fortune Brands", manufacturerId: "0x0463",
+    label: [{ $if: "productId === 0x89d1", value: "YRD410-F-ZW4" }, "YRD4X0-F-ZW4"],
+    devices: [{ productType: "0x0003", productId: "0x89d1" }, { productType: "0x0003", productId: "0x89d9" }],
+  }, D);
+  assert.deepEqual(recs.map((x) => x.install![0].guide), [
+    "https://devices.zwave-js.io/?jumpTo=0x0463:0x0003:0x89d1:0.0",
+    "https://devices.zwave-js.io/?jumpTo=0x0463:0x0003:0x89d9:0.0",
+  ]);
+  // no product ids: the Z-Wave JS UI quick start
+  const [bare] = fromDeviceFile(`${DIR}/0x0001/x.json`, { manufacturer: "HomePro", label: "ZDW103" }, D);
+  assert.equal(bare.install![0].guide, "https://zwave-js.github.io/zwave-js-ui/#/getting-started/quick-start");
 });

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { validate } from "@opendevicedb/core";
 import { finalize } from "../src/lib.ts";
-import { parseBuilds, configCpu, splitName, fromBuild } from "../src/sources/rockbox.ts";
+import { parseBuilds, configCpu, splitName, fromBuild, parseRbutil, rockboxInstall, manualInstallUrl, RBUTIL, MANUALS } from "../src/sources/rockbox.ts";
 
 const D = "2026-10-17";
 
@@ -93,4 +93,84 @@ test("builds → records: status mapping, variant merge, generic target dropped"
     assert.equal(r.projects![0].kind, "firmware");
     assert.deepEqual(validate(r), [], JSON.stringify(r));
   }
+});
+
+const RBUTIL_INI = `[general]
+build_info_url=https://download.rockbox.org/build-info
+
+[platforms]
+platform01=archosplayer
+platform57=sansaclipplus
+platform60=ipodmini2g
+platform61=ipod6g
+platform134=aigoerosq.k
+platform139=hidden
+
+; devices sections
+[archosplayer]
+name="Jukebox Player 6000 / Jukebox Studio 5/10/20"
+bootloadermethod=none
+manualname=
+
+[sansaclipplus]
+name="Sansa Clip+"
+bootloadermethod=ams
+manualname=
+
+[ipodmini2g]
+name="iPod Mini 2G"
+bootloadermethod=ipod
+manualname=ipodmini1g
+
+[ipod6g]
+name="iPod Classic (6th gen)"
+bootloadermethod=s5l
+manualname=
+
+[aigoerosq.k]
+name="AIGO EROS K"
+bootloadermethod=bspatch
+manualname=aigoerosk
+
+[hidden]
+bootloadermethod=file
+status=disabled
+
+[notlisted]
+bootloadermethod=file
+`;
+
+test("rbutil.ini targets and install routes", () => {
+  const u = parseRbutil(RBUTIL_INI);
+  assert.deepEqual([...u.keys()], ["archosplayer", "sansaclipplus", "ipodmini2g", "ipod6g", "aigoerosq"]);
+  assert.deepEqual(u.get("ipodmini2g"), { methods: ["ipod"], manual: "ipodmini1g" });
+  assert.deepEqual(u.get("aigoerosq"), { methods: ["bspatch"], manual: "aigoerosk" });
+  assert.equal(manualInstallUrl("ipod6g"), "https://download.rockbox.org/daily/manual/rockbox-ipod6g/rockbox-buildch2.html");
+
+  const manuals = new Set(["ipod6g", "sansaclipplus", "ipodmini1g"]);
+  const ipod = rockboxInstall({ key: "ipod6g", name: "iPod 6th gen (Classic)", status: 3 }, u.get("ipod6g"), manuals)!;
+  assert.deepEqual(ipod, {
+    project: "Rockbox", method: "other", guide: "https://download.rockbox.org/daily/manual/rockbox-ipod6g/rockbox-buildch2.html",
+    installer: RBUTIL, difficulty: "easy", tools: ["Computer with Rockbox Utility", "The player's USB cable"],
+    opens_device: false, brick_risk: "low", reversible: "yes", revert: "https://download.rockbox.org/daily/manual/rockbox-ipod6g/rockbox-buildch2.html",
+    notes: "On most players the original firmware stays available next to Rockbox.",
+  });
+  assert.equal(RBUTIL, "https://www.rockbox.org/wiki/RockboxUtility");
+  // manualname is followed; original firmware needed for ams
+  assert.equal(rockboxInstall({ key: "ipodmini2g", name: "iPod Mini 2nd gen", status: 3 }, u.get("ipodmini2g"), manuals)!.guide, manualInstallUrl("ipodmini1g"));
+  assert.match(rockboxInstall({ key: "sansaclipplus", name: "SanDisk Sansa Clip+", status: 3 }, u.get("sansaclipplus"), manuals)!.notes!, /original firmware file/);
+  // no daily manual: the utility page is the guide, no revert link
+  const archos = rockboxInstall({ key: "archosplayer", name: "Archos Player/Studio", status: 0, release: "3.15" }, u.get("archosplayer"), manuals)!;
+  assert.equal(archos.guide, RBUTIL);
+  assert.equal(archos.revert, undefined);
+  assert.match(archos.notes!, /installs no bootloader/);
+  // not in the utility: manual install, medium; unusable: no route
+  const manual = rockboxInstall({ key: "xduoox3", name: "xDuoo X3", status: 2 }, undefined, manuals)!;
+  assert.deepEqual([manual.guide, manual.difficulty, manual.installer], [MANUALS, "medium", undefined]);
+  assert.equal(rockboxInstall({ key: "fiiom3klinux", name: "FiiO M3K (Linux)", status: 1 }, undefined, manuals), null);
+
+  const rec = fromBuild({ key: "ipod6g", name: "iPod 6th gen (Classic)", status: 3 }, "S5L8702", true, D, ipod)!;
+  assert.deepEqual(validate(rec), []);
+  assert.equal(rec.install!.length, 1);
+  assert.equal(fromBuild({ key: "x", name: "Acme X", status: 1 }, null, false, D, null)!.install, undefined);
 });

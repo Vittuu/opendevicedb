@@ -17,7 +17,7 @@
 //   archived        → partial-protocol: an earlier port exists in the tree but is
 //                     unmaintained, unbuilt and may no longer boot.
 // Generic ports (QEMU, "Qualcomm msm8916-based device", "generic x86_64 system") are skipped.
-import { makeId, today, type DeviceRecord } from "@opendevicedb/core";
+import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
 import { clean, fetchJson, firstMatch, mapLimit, type Source } from "../lib.ts";
 import { normModel, normVendor, VENDORS } from "./lineageos.ts";
 
@@ -109,6 +109,53 @@ export function splitPmosName(manufacturer: string, name: string): { vendor: str
   return { vendor, model };
 }
 
+// ---------- install route (SPEC R1) ----------
+
+/** The wiki's general installation page (pmbootstrap, prebuilt images, per-device pages). */
+export const PMOS_INSTALL_GUIDE = `${WIKI}/wiki/Installation`;
+
+/**
+ * deviceinfo_flash_method → how pmbootstrap writes the image (docs: deviceinfo reference):
+ * all are USB boot modes of the device's own bootloader or SoC, except "none" (or no
+ * method), where the image is written to an SD card, USB drive or internal disk.
+ */
+const FLASHERS: Record<string, { tool: string; note: string }> = {
+  "fastboot": { tool: "fastboot", note: "Uses the bootloader's fastboot mode." },
+  "fastboot-bootpart": { tool: "fastboot", note: "Uses the bootloader's fastboot mode." },
+  "heimdall-bootimg": { tool: "Heimdall", note: "Uses Samsung's Download mode." },
+  "heimdall-isorec": { tool: "Heimdall", note: "Uses Samsung's Download mode." },
+  "0xffff": { tool: "0xFFFF", note: "Uses the Nokia flashing mode." },
+  "mtkclient": { tool: "mtkclient", note: "Uses the MediaTek boot ROM mode." },
+  "rkdeveloptool": { tool: "rkdeveloptool", note: "Uses the Rockchip maskrom/loader mode." },
+  "uuu": { tool: "uuu", note: "Uses the NXP i.MX serial download mode." },
+  "sp-flash-tool": { tool: "SP Flash Tool", note: "Uses the MediaTek download mode." },
+};
+
+/**
+ * Route for a port: the device's wiki page when it exists (it has the device-specific
+ * installation section), else the general installation page. Archived ports get no route:
+ * they are unbuilt and may no longer boot. Bootloader routes on phones and tablets need
+ * an unlocked bootloader, which wipes the device. Reversibility is not given: whether the
+ * stock system can be restored depends on the vendor's images.
+ */
+export function pmosInstall(category: PmCategory, info: Record<string, string>, wiki?: string | null): InstallRoute | null {
+  if (category === "archived") return null;
+  const guide = wiki ? wikiUrl(wiki) : PMOS_INSTALL_GUIDE;
+  const project = "Nura/postmarketOS";
+  const quality = category === "testing" || category === "downstream" ? ` This is a ${category} port: what works varies, check the device page.` : "";
+  const f = FLASHERS[clean(info.flash_method)];
+  if (!f) {
+    return { project, method: "other", guide, difficulty: "medium", tools: ["Computer with pmbootstrap, or a prebuilt image", "SD card or USB drive, where the device boots from one"], notes: `No flasher: the image is written to an SD card, USB drive or the internal storage as the device page describes.${quality}` };
+  }
+  const handheld = /^(handset|tablet|watch)$/i.test(clean(info.chassis));
+  const unlock = handheld && f.tool === "fastboot" ? " The bootloader must be unlocked first, which wipes the device." : "";
+  return {
+    project, method: "usb-bootloader", guide, difficulty: "medium",
+    tools: [`Computer with pmbootstrap and ${f.tool}`, "USB cable"],
+    notes: `${f.note}${unlock} Installing replaces the stock system: back up your data first.${quality}`,
+  };
+}
+
 /** One deviceinfo → record; null for generic ports or files without name/manufacturer. */
 export function fromDeviceinfo(category: PmCategory, dir: string, text: string, wiki?: string | null, date = today()): DeviceRecord | null {
   const info = parseDeviceinfo(text);
@@ -132,6 +179,7 @@ export function fromDeviceinfo(category: PmCategory, dir: string, text: string, 
     identifiers: { chips: socFromDtb(Object.entries(info).filter(([k]) => /^dtb/.test(k)).map(([, v]) => v).join(" ")) },
     status: PMOS_STATUS[category],
     projects,
+    install: [pmosInstall(category, info, wiki)].filter((r): r is InstallRoute => !!r),
     provenance: { sources: ["postmarketos"] },
     updated: date,
   };

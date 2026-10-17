@@ -10,7 +10,7 @@
 // "<Codename> (<OEM product>)" or names the products in its help text; each product becomes a
 // record under its OEM (codename as alias), unnamed codenames (reference boards, unreleased
 // variants) are skipped. Evaluation/reference/emulation boards are skipped.
-import { makeId, today, type DeviceRecord } from "@opendevicedb/core";
+import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
 import { clean, fetchJson, githubRaw, mapLimit, type Source } from "../lib.ts";
 
 const REPO = "coreboot/coreboot", BRANCH = "main", ROOT = "src/mainboard";
@@ -201,6 +201,63 @@ export interface BoardInput {
   boardInfo?: string;               // <board>/board_info.txt
   variantDirs?: Map<string, string>;
   variantInfo?: Map<string, string>; // variant dir → board_info.txt
+  doc?: string;                     // doc.coreboot.org page of the board, when there is one
+}
+
+// ---------- install route (SPEC R1) ----------
+
+export const COREBOOT_FLASHING = "https://doc.coreboot.org/tutorial/flashing_firmware/index.html";
+
+/** Board page on doc.coreboot.org from the Documentation/mainboard/*.md paths, or undefined. */
+export function boardDoc(dir: string, docPaths: Set<string>): string | undefined {
+  const board = dir.split("/")[1];
+  const hit = [`${dir}.md`, `${dir}/index.md`, `${dir}/${board}.md`].find((p) => docPaths.has(p));
+  return hit ? `https://doc.coreboot.org/mainboard/${hit.replace(/\.md$/, ".html")}` : undefined;
+}
+
+/**
+ * One route per board. coreboot publishes no images: you build it for the board, then write
+ * it to the flash chip. The dependable way, and the way back, is an external programmer on
+ * the chip (opening the machine), so: hard, high brick risk, reversible with the backup of
+ * the original chip contents. The chip facts come from board_info.txt. Chromebooks (google/)
+ * already run coreboot-based firmware: flashing a build needs write protection disabled.
+ */
+export function corebootInstall(info: Record<string, string>, vendorDir: string, doc?: string): InstallRoute {
+  const guide = doc ?? COREBOOT_FLASHING;
+  const backup = "Back up the original flash contents first: writing them back with a programmer restores the stock firmware.";
+  const build = "There are no official images: you build coreboot for this board from source (some boards need vendor binaries extracted from the stock firmware).";
+  if (vendorDir === "google") {
+    return {
+      project: "coreboot", method: "other", guide, difficulty: "hard", brick_risk: "high", reversible: "yes",
+      tools: ["flashrom", "SPI flash programmer (CH341A) to recover from a failed flash"],
+      notes: `Chromebooks already ship coreboot-based firmware; flashing your own build needs the firmware write protection disabled first (a screw, the battery or a debug cable, depending on the model). ${build} ${backup}`,
+    };
+  }
+  const proto = clean(info["rom protocol"]).toUpperCase();
+  const pkg = clean(info["rom package"]);
+  const socketed = info["rom socketed"] === "y";
+  const flashrom = info["flashrom support"] === "y"
+    ? " board_info.txt says flashrom supports the board, so internal flashing may work, but the stock firmware often locks the flash."
+    : "";
+  const sock = socketed ? " The chip is socketed: it can be taken out and written in the programmer." : "";
+  if (proto && proto !== "SPI") {
+    return {
+      project: "coreboot", method: "other", guide, difficulty: "hard", opens_device: true, brick_risk: "high", reversible: "yes",
+      tools: [`Flash programmer for ${proto}${pkg ? ` ${pkg}` : ""} chips`],
+      notes: `${build}${sock}${flashrom} ${backup}`.replace(/\s+/g, " ").trim(),
+    };
+  }
+  const clips: string[] = [];
+  if (!socketed) {
+    if (/SOIC-?8\b/i.test(pkg)) clips.push("SOIC-8 test clip");
+    if (/SOIC-?16\b/i.test(pkg)) clips.push("SOIC-16 test clip");
+    if (/WSON/i.test(pkg)) clips.push("WSON-8 probe, or desoldering the chip");
+  }
+  return {
+    project: "coreboot", method: "spi-programmer", guide, difficulty: "hard", opens_device: true, brick_risk: "high", reversible: "yes",
+    tools: ["SPI flash programmer (CH341A)", ...clips],
+    notes: `${build}${pkg ? ` Flash chip: ${pkg}.` : ""}${sock}${flashrom} ${backup}`.replace(/\s+/g, " ").trim(),
+  };
 }
 
 function summaryOf(info: Record<string, string>, dir: string): string {
@@ -228,7 +285,8 @@ export function fromBoard(b: BoardInput, date = today()): DeviceRecord[] {
       kind: "firmware",
       license: "GPL-2.0",
     };
-    const base = { status: "open-firmware" as const, summary: summaryOf(info, b.dir), projects: [project], provenance: { sources: ["coreboot"] }, updated: date };
+    const install = [corebootInstall(info, vendorDir, b.doc)];
+    const base = { status: "open-firmware" as const, summary: summaryOf(info, b.dir), projects: [project], install, provenance: { sources: ["coreboot"] }, updated: date };
 
     if (vendorDir === "google") {
       const { codenames, products } = googleProducts(e);
@@ -275,6 +333,16 @@ async function mainboardFiles(): Promise<string[]> {
   return tree.tree.filter((x: any) => x.type === "blob").map((x: any) => x.path as string);
 }
 
+/** Paths of the board pages under Documentation/mainboard (e.g. "lenovo/t440p.md"). */
+async function mainboardDocs(): Promise<Set<string>> {
+  const h = { headers: githubHeaders() };
+  const top = await fetchJson(`https://api.github.com/repos/${REPO}/git/trees/${BRANCH}:Documentation`, h);
+  const sha = top.tree.find((x: any) => x.path === "mainboard" && x.type === "tree")?.sha;
+  if (!sha) throw new Error("Documentation/mainboard not found");
+  const tree = await fetchJson(`https://api.github.com/repos/${REPO}/git/trees/${sha}?recursive=1`, h);
+  return new Set(tree.tree.filter((x: any) => x.type === "blob" && x.path.endsWith(".md")).map((x: any) => x.path as string));
+}
+
 const source: Source = {
   source: "coreboot",
   name: "coreboot",
@@ -282,6 +350,10 @@ const source: Source = {
   license: "GPL-2.0",
   async fetch() {
     const files = new Set(await mainboardFiles());
+    const docPaths = await mainboardDocs().catch((e) => {
+      console.error(`coreboot: board docs not listed, routes use the generic flashing guide: ${e}`);
+      return new Set<string>();
+    });
     const raw = (p: string) => githubRaw(REPO, BRANCH, `${ROOT}/${p}`);
     const vendors = [...files].filter((p) => /^[^/]+\/Kconfig\.name$/.test(p)).map((p) => p.split("/")[0]);
     const vendorNames = new Map(await mapLimit(vendors, 16, async (v) => [v, parseVendorName(await raw(`${v}/Kconfig.name`))] as const));
@@ -299,6 +371,7 @@ const source: Source = {
         boardInfo: await get("board_info.txt"),
         variantDirs: kconfig ? parseVariantDirs(kconfig) : undefined,
         variantInfo,
+        doc: boardDoc(dir, docPaths),
       };
     });
     const out = inputs.flatMap((b) => fromBoard(b));

@@ -10,7 +10,7 @@
 //
 // printerVendor() and canonModel() are shared with the Marlin importer so that the same
 // printer gets the same id from both sources.
-import { makeId, today, type DeviceRecord } from "@opendevicedb/core";
+import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
 import { clean, githubFiles, githubRaw, mapLimit, type Source } from "../lib.ts";
 
 const REPO = "Klipper3d/klipper", BRANCH = "master";
@@ -151,11 +151,16 @@ export function prettyBoard(stem: string): string {
   }).join(" ");
 }
 
-/** Micro-controllers the header comment (before the first [section]) says to compile for ("AVR atmega2560", "STM32F103"…). */
-export function headerChips(text: string): string[] {
+/** Header comment of a config file (the lines before the first [section]). */
+const header = (text: string) => {
   const lines = text.split(/\r?\n/);
   const end = lines.findIndex((l) => l.startsWith("["));
-  const head = lines.slice(0, end < 0 ? 40 : end).filter((l) => l.startsWith("#")).join(" ");
+  return lines.slice(0, end < 0 ? 40 : end).filter((l) => l.startsWith("#")).join(" ");
+};
+
+/** Micro-controllers the header comment (before the first [section]) says to compile for ("AVR atmega2560", "STM32F103"…). */
+export function headerChips(text: string): string[] {
+  const head = header(text);
   const out = new Set<string>();
   for (const m of head.matchAll(/\b(atmega\d+\w?|at90usb\d+|stm32[fghl]\d{3}\w*|gd32f\d+\w*|hc32f\d+|lpc17\d\d|sam[34][a-z]\d+\w*|same\d+\w*|rp2040)\b/gi)) {
     const c = m[1];
@@ -199,12 +204,48 @@ export function parseBoardName(path: string): { vendor: string; model: string } 
   return { vendor: printerVendor(v), model: prettyBoard(rest.join("-")) };
 }
 
+// ---------- install route (SPEC R1) ----------
+
+const INSTALL_GUIDE = "https://www.klipper3d.org/Installation.html";
+
+/**
+ * How the controller board takes the Klipper firmware. The header comment decides first: an
+ * SD card (or the "file name must end in .bin" rule of SD bootloaders) means the SD card;
+ * "make flash", avrdude, bossac or DFU mean the USB bootloader. Otherwise the micro-controller:
+ * LPC176x and STM32-family printer boards read firmware from the SD card, AVR and SAM boards
+ * are flashed over USB, and an unknown one gets the Installation guide's default, `make flash`
+ * over USB.
+ */
+export function klipperFlashMethod(text: string, chips: string[]): "sd-card" | "usb-bootloader" {
+  const h = header(text);
+  if (/\b(micro[- ]?)?sd[- ]?card\b|\bmicro-?sd\b|must end in "?\.bin/i.test(h)) return "sd-card";
+  if (/make flash|avrdude|bossac|\bdfu\b|hid bootloader/i.test(h)) return "usb-bootloader";
+  if (chips.length && chips.every((c) => /^(LPC|STM32|GD32|HC32)/i.test(c))) return "sd-card";
+  if (!chips.length && /\blpc176x\b/i.test(h)) return "sd-card"; // "compiled for the LPC176x"
+  return "usb-bootloader";
+}
+
+export function klipperInstall(file: string, text: string, chips: string[]): InstallRoute {
+  const method = klipperFlashMethod(text, chips);
+  return {
+    project: "Klipper",
+    method,
+    guide: INSTALL_GUIDE,
+    difficulty: "medium",
+    tools: ["Raspberry Pi or other Linux computer (runs the Klipper host)", "USB cable", ...(method === "sd-card" ? ["microSD card"] : [])],
+    brick_risk: "low",
+    reversible: "partial",
+    notes: `Board-specific build and flashing steps are in the header of config/${file}. Going back needs the vendor's stock firmware file, when the vendor publishes it.`,
+  };
+}
+
 export function fromConfig(path: string, text: string, date = today()): DeviceRecord[] {
   const file = path.split("/").pop()!;
   const project = { name: `Klipper (${file})`, url: `https://github.com/${REPO}/blob/${BRANCH}/${path}`, kind: "firmware", license: "GPL-3.0" };
   const chips = headerChips(text);
   const mcu = chips.length ? ` (MCU: ${chips.join(", ")})` : "";
-  const base = { identifiers: { chips }, status: "open-firmware" as const, projects: [project], provenance: { sources: ["klipper"] }, updated: date };
+  const install = [klipperInstall(file, text, chips)];
+  const base = { identifiers: { chips }, status: "open-firmware" as const, projects: [project], install, provenance: { sources: ["klipper"] }, updated: date };
   const board = parseBoardName(path);
   if (board) {
     return [{

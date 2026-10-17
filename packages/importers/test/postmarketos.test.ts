@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { validate } from "@opendevicedb/core";
-import { fromDeviceinfo, parseDeviceinfo, isGeneric, pmosCategory, socFromDtb, splitPmosName, wikiTitle, wikiUrl, pmaportsUrl } from "../src/sources/postmarketos.ts";
+import { fromDeviceinfo, parseDeviceinfo, isGeneric, pmosCategory, socFromDtb, splitPmosName, wikiTitle, wikiUrl, pmaportsUrl, pmosInstall, PMOS_INSTALL_GUIDE } from "../src/sources/postmarketos.ts";
 import { fromDevice } from "../src/sources/lineageos.ts";
 
 const D = "2026-10-17";
@@ -100,4 +100,32 @@ test("wiki and pmaports urls", () => {
   assert.equal(wikiTitle({ name: "PINE64 PinePhone", codename: "pine64-pinephone" }), "PINE64 PinePhone (pine64-pinephone)");
   assert.equal(wikiUrl('Samsung Chromebook 2 11.6" (google-peach-pit)'), "https://wiki.nura.eco/wiki/Samsung_Chromebook_2_11.6%22_(google-peach-pit)");
   assert.equal(pmaportsUrl("testing", "device-pine64-pinephone"), "https://gitlab.postmarketos.org/postmarketOS/pmaports/-/tree/main/device/testing/device-pine64-pinephone");
+});
+
+test("install route from deviceinfo_flash_method", () => {
+  const fp4 = fromDeviceinfo("community", "device-fairphone-fp4", FP4 + 'deviceinfo_flash_method="fastboot"\n', "Fairphone 4 (fairphone-fp4)", D)!;
+  assert.deepEqual(validate(fp4), []);
+  assert.deepEqual(fp4.install, [{
+    project: "Nura/postmarketOS", method: "usb-bootloader", guide: "https://wiki.nura.eco/wiki/Fairphone_4_(fairphone-fp4)", difficulty: "medium",
+    tools: ["Computer with pmbootstrap and fastboot", "USB cable"],
+    notes: "Uses the bootloader's fastboot mode. The bootloader must be unlocked first, which wipes the device. Installing replaces the stock system: back up your data first.",
+  }]);
+  // no wiki page: the general installation page; testing port: says so
+  const noWiki = fromDeviceinfo("testing", "device-fairphone-fp4", FP4 + 'deviceinfo_flash_method="fastboot"\n', null, D)!;
+  assert.equal(noWiki.install![0].guide, PMOS_INSTALL_GUIDE);
+  assert.equal(PMOS_INSTALL_GUIDE, "https://wiki.nura.eco/wiki/Installation");
+  assert.match(noWiki.install![0].notes!, /testing port/);
+  // Samsung: Heimdall, no unlock claim
+  const sam = pmosInstall("community", { flash_method: "heimdall-isorec", chassis: "handset" }, null)!;
+  assert.deepEqual(sam.tools, ["Computer with pmbootstrap and Heimdall", "USB cable"]);
+  assert.doesNotMatch(sam.notes!, /unlocked/);
+  // no flasher (SBC, laptop): written to storage
+  const sbc = pmosInstall("testing", { chassis: "embedded" }, null)!;
+  assert.equal(sbc.method, "other");
+  assert.match(sbc.notes!, /No flasher/);
+  // a fastboot SBC is not told to unlock a phone bootloader
+  assert.doesNotMatch(pmosInstall("main", { flash_method: "fastboot", chassis: "embedded" }, null)!.notes!, /unlocked/);
+  // archived ports: no route
+  assert.equal(pmosInstall("archived", { flash_method: "fastboot", chassis: "handset" }, null), null);
+  assert.equal(fromDeviceinfo("archived", "device-fairphone-fp4", FP4, null, D)!.install!.length, 0);
 });

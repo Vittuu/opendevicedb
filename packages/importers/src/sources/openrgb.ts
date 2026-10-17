@@ -9,7 +9,7 @@
 // because gitlab.com rate-limits unauthenticated raw downloads to a few dozen per IP.
 // Skipped: detectors with no fixed device (network lights, E1.31, generic SMBus families, QMK
 // and Logitech HID++ dynamic detectors). Sources are GPL-2.0-or-later (a few files GPL-2.0-only).
-import { makeId, today, type DeviceRecord } from "@opendevicedb/core";
+import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
 import { clean, githubFiles, githubRaw, mapLimit, type Source } from "../lib.ts";
 
 const MIRROR = "CalcProgrammer1/OpenRGB", BRANCH = "master";
@@ -159,6 +159,28 @@ export function toEntry(d: Detector, dir: string, lookup: Lookup): Entry | null 
   return e;
 }
 
+/**
+ * Install route (SPEC R1): OpenRGB runs on the computer the device is attached to; nothing is
+ * flashed. Guides are the official access setup pages (USB permissions, or SMBus drivers for
+ * RAM, GPUs and motherboards). OpenRGB's README warns that some hardware has been damaged by
+ * its reverse-engineered protocols in the past: risk "low", not "none".
+ */
+export function openrgbInstall(bus: Entry["bus"]): InstallRoute {
+  const smbus = bus === "smbus";
+  return {
+    project: "OpenRGB",
+    method: "host-software",
+    guide: `${GITLAB.replace("/-/tree/", "/-/blob/")}/Documentation/${smbus ? "SMBusAccess" : "USBAccess"}.md`,
+    installer: "https://openrgb.org/releases.html",
+    difficulty: smbus ? "medium" : "easy",
+    brick_risk: "low",
+    reversible: "yes",
+    notes: smbus
+      ? "Nothing is flashed. SMBus/I2C access must be enabled first (a driver on Windows, kernel modules on Linux). OpenRGB warns that its reverse-engineered protocols have damaged some hardware in the past."
+      : "Nothing is flashed: OpenRGB sets the lighting over USB from your computer. OpenRGB warns that its reverse-engineered protocols have damaged some hardware in the past.",
+  };
+}
+
 export function fromEntry(e: Entry, vendors: string[], categories: Map<string, string[]>, date = today()): DeviceRecord {
   const { vendor, model } = splitDeviceName(e.name, vendors);
   return {
@@ -176,6 +198,7 @@ export function fromEntry(e: Entry, vendors: string[], categories: Map<string, s
       notes: e.bus === "usb" ? "Lighting control only, USB HID (OpenRGB)" : "Lighting control only, SMBus/I2C (OpenRGB)",
     }],
     projects: [{ name: "OpenRGB", url: `${GITLAB}/${e.dir.split("/").map(encodeURIComponent).join("/")}`, kind: "driver", license: "GPL-2.0-or-later" }],
+    install: [openrgbInstall(e.bus)],
     provenance: { sources: ["openrgb"] },
     updated: date,
   };
