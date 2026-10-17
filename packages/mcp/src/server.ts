@@ -7,16 +7,16 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { backendFromEnv, type Backend } from "./backend.ts";
 import { TOOLS, type Context } from "./tools.ts";
 
-const READ_ONLY = new Set(["lookup_device", "search_devices", "list_sources"]);
+const READ_ONLY = new Set(["lookup_device", "search_devices", "list_sources", "request_device"]);
 
 export function createServer(backend: Backend, opts: { today?: string } = {}): McpServer {
   const server = new McpServer(
-    { name: "opendevicedb", version: "0.1.0" },
+    { name: "opendevicedb", version: "0.2.0" },
     {
       instructions:
         "OpenDeviceDB is a directory of devices whose protocols or firmware have already been reverse engineered. " +
         "Before reverse engineering any device, call lookup_device (identifiers such as FCC id or USB vid:pid match best). " +
-        "If nothing is known, call claim_device before starting. When you finish, call publish_findings, then open a pull request. " +
+        "If nothing is known, call claim_device before starting (or request_device if the user only wants the device to exist). When you finish, call publish_findings, then open a pull request. " +
         `Backend: ${backend.kind} (${backend.location})${backend.root ? "" : ", read-only"}.`,
     },
   );

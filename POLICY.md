@@ -16,6 +16,11 @@ legally sustainable, contributions must respect these rules.
 - Ways to access devices or accounts you do not own, or other people's data.
 - Circumvention of DRM for the purpose of copyright infringement.
 
+## Device requests
+Requests ("wanted" issues) follow the same rules: a request whose goal is refused above
+(e.g. removing geofencing, accessing devices you do not own) is labelled `policy` and closed
+after review. Requests are public; do not put personal data in them.
+
 ## Legal basis
 Reverse engineering for interoperability is protected in many jurisdictions
 (e.g. EU Directive 2009/24/EC art. 6, US DMCA §1201(f) and the triennial exemptions).

@@ -4,6 +4,8 @@ import Base from "../../../layouts/Base.astro";
 import StatusBadge from "../../../components/StatusBadge.astro";
 import { db, effectiveStatus, liveClaims, editUrl, jsonUrl } from "../../../lib/data.ts";
 import { STATUS_HELP, displayName } from "../../../lib/config.ts";
+import { wantedById } from "../../../lib/wanted.ts";
+import { statusRank, wantedIssueUrl } from "@opendevicedb/core";
 
 export function getStaticPaths() {
   return db().records.map((record) => {
@@ -28,6 +30,10 @@ const vendorSupport: Record<string, string> = {
 };
 const contactHref = (c: string) => /^https?:\/\//.test(c) ? c : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c) ? `mailto:${c}` : undefined;
 const isUrl = (s: string) => /^https?:\/\//.test(s);
+// Requests only matter while nothing usable exists yet.
+const wantedOpen = statusRank(status) < statusRank("partial-protocol");
+const request = wantedOpen ? (await wantedById()).get(r.id) : undefined;
+const requestUrl = wantedIssueUrl({ vendor: r.vendor, model: r.model, identifiers: Object.values(r.identifiers ?? {}).flat().slice(0, 4) as string[] });
 const desc = r.summary ?? `${r.vendor} ${r.model} (${r.category}): ${STATUS_HELP[status]}`;
 ---
 <Base title={displayName(r.vendor, r.model)} description={desc}>
@@ -60,6 +66,18 @@ const desc = r.summary ?? `${r.vendor} ${r.model} (${r.category}): ${STATUS_HELP
     <a class="btn" href={jsonUrl(r.id)}>JSON</a>
     <a class="btn" href="/contribute/#claims">Claim this device</a>
   </div>
+
+  {wantedOpen && (
+    <div class="card wanted-card">
+      {request ? (
+        <p><span class="badge wanted">👍 {request.votes} want{request.votes === 1 ? "s" : ""} it</span>
+          {" "}{request.votes === 1 ? "Someone wants" : `${request.votes} people want`} this device usable with open code.
+          {" "}<a href={request.url}>Add your 👍 to the request</a> to count yourself in.</p>
+      ) : (
+        <p>Want this device usable with open code? <a href={requestUrl}>Request it</a>: others add a 👍, and whoever reverse engineers it knows people are waiting. Requests are listed on <a href="/wanted/">Wanted</a>.</p>
+      )}
+    </div>
+  )}
 
   <h2 id="claims">Being worked on</h2>
   {live.length === 0 ? (

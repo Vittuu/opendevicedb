@@ -139,6 +139,8 @@ main { padding-top: 12px; padding-bottom: 4rem; min-height: 60vh; }
 .badge.s-open-firmware { --st: var(--st-open-firmware); }
 .badge.verified { --st: var(--st-open-firmware); }
 .badge.verified::before { content: "✓"; background: none; width: auto; height: auto; color: var(--st); font-size: 0.9em; }
+.badge.wanted { --st: var(--accent); }
+.badge.wanted::before { display: none; }
 .badge.neutral { --st: var(--muted); }
 .badge.neutral::before { display: none; }
 .badge.neutral { padding-left: 9px; font-weight: 500; }
@@ -190,6 +192,8 @@ a.counter:hover { border-color: var(--muted); }
 .facts dd { margin: 0; overflow-wrap: anywhere; }
 .section-empty { color: var(--muted); }
 .claim { border-left: 4px solid var(--st-in-progress); }
+.wanted-card { border-left: 4px solid var(--accent); margin-top: 18px; }
+.wanted-card p { margin: 0; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
 
 /* news */

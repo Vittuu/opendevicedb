@@ -15,6 +15,7 @@ this repository with `npm install` done at its root.
 | `search_devices(query, category?, status?, limit?)` | explore: ranked matches over names, aliases and identifiers |
 | `claim_device(id? \| vendor+model, category?, who, contact, scope, days=30)` | announce you are working on it (max 90 days); creates a stub record if needed |
 | `publish_findings(id, patch, allow_downgrade?, release_claim_of?)` | merge your results into the record (validated, status only moves forward, policy-screened) |
+| `request_device(vendor, model, fcc_id?, usb?, ble_name?, zigbee_model?, goal?)` | your user wants the device but will not reverse engineer it: the existing request to add a 👍 to, or a pre-filled link to a new public GitHub issue they submit themselves (read-only, never posts) |
 | `list_sources()` | imported databases with license, snapshot date and record count, plus the curated count |
 
 Writes go to `data/devices/<vendor>/<model>.yaml` in the local checkout. The server never
@@ -74,6 +75,8 @@ instead of `ODB_REPO`.
 1. **lookup** — `lookup_device` with whatever is on the label (FCC id, USB vid:pid from
    `lsusb`, BLE name) or vendor + model. Follow the recommendation: if open firmware or an
    SDK exists, use it; if someone holds a live claim, contact them.
+   Nothing known and your user only wants the device to exist? Give them the request link
+   (`request` / `request_url` in the lookup result, or `request_device`) so the interest counts.
 2. **claim** — nothing known (or only part)? `claim_device` with who/contact/scope before
    starting, then commit the file and open the PR so the claim is visible to others.
 3. **work** — reverse engineer. Never touch Remote ID, geofencing or other safety

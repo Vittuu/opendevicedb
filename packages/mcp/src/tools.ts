@@ -6,7 +6,8 @@ import { z } from "zod";
 import {
   SCHEMA, STATUSES, curatedPath, effectiveStatus, liveClaims, lookup, makeId, mergeRecords,
   parseRecordYaml, search, stringifyRecordYaml, today, validate,
-  type Claim, type DeviceRecord, type LookupQuery, type Status,
+  matchWanted, wantedIssueUrl, wantedToIndexEntry, statusRank,
+  type Claim, type DeviceRecord, type LookupQuery, type Status, type WantedEntry,
 } from "@opendevicedb/core";
 import type { Backend } from "./backend.ts";
 import { policyScan, POLICY_POINTER, type PolicyHit } from "./policy.ts";
@@ -154,6 +155,9 @@ export async function searchDevices(ctx: Context, a: { query: string; category?:
   const on = ctx.today ?? today();
   const index = await ctx.backend.index(on);
   const hits = search(index, a.query ?? "", { category: a.category, status: a.status, limit: a.limit ?? 20 });
+  const known = new Set(index.map((e) => e.id));
+  const wanted = (await ctx.backend.wanted()).filter((w) => !known.has(w.id));
+  const requests = a.query?.trim() ? search(wanted.map(wantedToIndexEntry), a.query, { limit: 5 }).map((h) => publicRequest(wanted.find((w) => w.id === h.id)!)) : [];
   return {
     ok: true,
     query: a.query,
@@ -163,9 +167,11 @@ export async function searchDevices(ctx: Context, a: { query: string; category?:
       id: h.id, vendor: h.vendor, model: h.model, aliases: h.aliases, category: h.category, status: h.status,
       sources: h.sources, live_claims: h.claims, verified: h.verified, score: h.score,
     })),
+    ...(requests.length ? { requests } : {}),
     hint: hits.length
       ? "Call lookup_device with the id for the full record, live claims and a recommendation."
-      : "No match. Try lookup_device with an identifier (FCC id, USB vid:pid, BLE name, Zigbee model). If nothing is known, call claim_device before you start reverse engineering.",
+      : "No match. Try lookup_device with an identifier (FCC id, USB vid:pid, BLE name, Zigbee model). If nothing is known, call claim_device before you start reverse engineering" +
+        (requests.length ? "; `requests` lists devices people asked for but nobody has published yet." : ", or request_device if your user only wants it to exist."),
   };
 }
 
@@ -201,6 +207,7 @@ export async function lookupDevice(ctx: Context, q: LookupArgs): Promise<Result>
     const index = await backend.index(on);
     const words = q.model ?? q.vendor ?? q.id?.split("/").pop()?.replace(/-/g, " ");
     const similar = words ? search(index, words, { limit: 5 }).map((h) => ({ id: h.id, vendor: h.vendor, model: h.model, status: h.status })) : [];
+    const request = matchWanted(await backend.wanted(), wantedQuery(q));
     return {
       ok: true,
       found: false,
@@ -208,21 +215,27 @@ export async function lookupDevice(ctx: Context, q: LookupArgs): Promise<Result>
         `Nothing is known about this device in OpenDeviceDB (${index.length} devices searched). ` +
         "Before you start reverse engineering, call claim_device so nobody duplicates your work, " +
         "and call publish_findings when you are done." +
-        (similar.length ? " Check the `similar` entries first: one may be the same device under another name." : ""),
+        (similar.length ? " Check the `similar` entries first: one may be the same device under another name." : "") +
+        " " + requestAdvice(request, q),
       query: given,
       similar,
+      ...(request ? { request: publicRequest(request) } : { request_url: wantedIssueUrl(prefill(q)) }),
     };
   }
 
   const live = liveClaims(record, on);
+  const status = effectiveStatus(record, on);
+  const request = statusRank(status) < statusRank("partial-protocol")
+    ? (await backend.wanted()).find((w) => w.id === record!.id) : undefined;
   const file = backend.root && existsSync(curatedPath(record.id, backend.root)) ? relative(backend.root, curatedPath(record.id, backend.root)) : undefined;
   return {
     ok: true,
     found: true,
     id: record.id,
-    effective_status: effectiveStatus(record, on),
-    recommendation: recommend(record, on),
+    effective_status: status,
+    recommendation: recommend(record, on) + (request ? ` ${request.votes} ${request.votes === 1 ? "person wants" : "people want"} this device (${request.url}): publishing a result helps them all.` : ""),
     live_claims: live,
+    ...(request ? { request: publicRequest(request) } : {}),
     curated_file: file,
     record,
   };
@@ -445,6 +458,76 @@ export async function publishFindings(ctx: Context, a: { id: string; patch: Patc
   };
 }
 
+// ---------- requests (request_device) ----------
+
+const publicRequest = (w: WantedEntry) => ({ id: w.id, vendor: w.vendor, model: w.model, votes: w.votes, url: w.url, opened: w.opened, issues: w.issues });
+
+const wantedQuery = (q: LookupArgs) => ({
+  id: q.id, vendor: q.vendor, model: q.model,
+  identifiers: [q.fcc_id, q.usb, q.ble_name, q.zigbee_model].filter((x): x is string => !!x),
+});
+
+const prefill = (q: LookupArgs & { goal?: string }) => ({
+  vendor: q.vendor, model: q.model ?? q.id?.split("/").pop()?.replace(/-/g, " "), goal: q.goal,
+  identifiers: [
+    q.fcc_id && `FCC ID: ${q.fcc_id}`, q.usb && `USB: ${q.usb}`, q.ble_name && `BLE name: ${q.ble_name}`, q.zigbee_model && `Zigbee model: ${q.zigbee_model}`,
+  ].filter((x): x is string => !!x),
+});
+
+function requestAdvice(request: WantedEntry | null, q: LookupArgs): string {
+  if (request) {
+    return `${request.votes} ${request.votes === 1 ? "person has" : "people have"} already requested it (${request.url}). ` +
+      "If your user only wants it to exist, give them that link to add a 👍 (do not open a new request).";
+  }
+  return "If your user only wants it to exist (they will not reverse engineer it), give them `request_url`: " +
+    "a pre-filled public GitHub issue they review and submit, so others can add a 👍.";
+}
+
+export const requestShape = {
+  vendor: z.string().min(1).describe("Manufacturer or brand, e.g. \"Parrot\"."),
+  model: z.string().min(1).describe("Exact model name, e.g. \"Bebop 2\"."),
+  fcc_id: z.string().optional().describe("FCC ID from the label."),
+  usb: z.string().optional().describe("USB vendor:product id (lsusb)."),
+  ble_name: z.string().optional().describe("Bluetooth LE advertised name."),
+  zigbee_model: z.string().optional().describe("Zigbee modelId."),
+  goal: z.string().optional().describe("What your user wants to do with it, in their words (e.g. \"fly it from Python now that the app is gone\")."),
+};
+
+export async function requestDevice(ctx: Context, a: LookupArgs & { vendor: string; model: string; goal?: string }): Promise<Result> {
+  const on = ctx.today ?? today();
+  if (!a.vendor?.trim() || !a.model?.trim()) return fail("vendor and model are required.");
+  const hits = policyScan([["goal", a.goal]]);
+  if (hits.length) return policyRefusal(hits, ctx.backend.root);
+  const hit = lookup(await ctx.backend.records(), a);
+  const status = hit ? effectiveStatus((await ctx.backend.get(hit.id)) ?? hit, on) : undefined;
+  if (hit && status && statusRank(status) >= statusRank("partial-protocol")) {
+    return {
+      ok: true,
+      available: true,
+      id: hit.id,
+      effective_status: status,
+      recommendation: `Already in OpenDeviceDB as ${hit.id} (${status}): call lookup_device with this id instead of requesting it.`,
+    };
+  }
+  const request = matchWanted(await ctx.backend.wanted(), wantedQuery({ ...a, id: hit?.id }));
+  if (request) {
+    return {
+      ok: true,
+      available: false,
+      request: publicRequest(request),
+      recommendation: `Already requested by ${request.votes} ${request.votes === 1 ? "person" : "people"}. ` +
+        `Give your user ${request.url} to add a 👍 there (and to follow it: it closes when a result is published). Do not open a new request.`,
+    };
+  }
+  return {
+    ok: true,
+    available: false,
+    request_url: wantedIssueUrl(prefill(a)),
+    recommendation: "Nobody has requested it yet. Give your user `request_url`: it opens a pre-filled GitHub issue form " +
+      "(public; needs a GitHub account) that they review and submit themselves. This server never submits anything.",
+  };
+}
+
 // ---------- list_sources ----------
 
 export async function listSources(ctx: Context): Promise<Result> {
@@ -506,6 +589,16 @@ export const TOOLS: ToolDef[] = [
       "geofencing or other safety functions (POLICY.md). Set provenance.ai_assisted honestly. Then open a pull request — the result gives the commands.",
     shape: publishShape,
     run: publishFindings,
+  },
+  {
+    name: "request_device",
+    title: "Request a device (say your user wants it)",
+    description:
+      "Use when your user wants a device to become usable with open code but will not reverse engineer it themselves " +
+      "(lookup_device found nothing usable). Returns the existing request to add a 👍 to, or a pre-filled link to a new public " +
+      "GitHub issue that the user reviews and submits. Read-only: this tool never posts anything.",
+    shape: requestShape,
+    run: requestDevice,
   },
   {
     name: "list_sources",

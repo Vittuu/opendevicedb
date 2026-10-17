@@ -3,15 +3,18 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: "17 4 * * *" # daily rebuild so expired claims drop off
+    - cron: "17 */6 * * *" # expired claims drop off, request 👍 counts refresh
+  issues:
+    types: [opened, closed, reopened, edited, deleted] # device requests (wanted.json)
   workflow_dispatch:
 permissions:
   contents: read
+  issues: read
   pages: write
   id-token: write
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: false # a newer run waits; pending ones in between are dropped
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,6 +25,8 @@ jobs:
       - run: npm ci
       - run: npm run validate
       - run: npm run build -w site
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # device requests are read from the issues API
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with: { path: site/dist }

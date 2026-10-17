@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Add or fix a device record
+    url: https://opendevicedb.org/contribute/
+    about: Records are YAML files; edit them with a pull request.

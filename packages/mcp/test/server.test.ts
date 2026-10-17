@@ -17,11 +17,11 @@ test("stdio server lists the tools and answers lookup_device, claim_device", asy
     await client.connect(new StdioClientTransport({
       command: process.execPath,
       args: [SERVER],
-      env: { ...process.env, ODB_REPO: root } as Record<string, string>,
+      env: { ...process.env, ODB_REPO: root, ODB_API_URL: "http://127.0.0.1:9" } as Record<string, string>,
       stderr: "ignore",
     }));
     const { tools } = await client.listTools();
-    assert.deepEqual(tools.map((t) => t.name).sort(), ["claim_device", "list_sources", "lookup_device", "publish_findings", "search_devices"]);
+    assert.deepEqual(tools.map((t) => t.name).sort(), ["claim_device", "list_sources", "lookup_device", "publish_findings", "request_device", "search_devices"]);
     assert.ok(tools.find((t) => t.name === "lookup_device")!.inputSchema.properties!.fcc_id);
 
     const found: any = await client.callTool({ name: "lookup_device", arguments: { vendor: "Acme", model: "Sky 1" } });

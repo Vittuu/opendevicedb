@@ -85,9 +85,35 @@ site/                         Astro static site: directory, device pages, news, 
 
 - `/api/index.json` — `[{id, vendor, model, category, status, sources[], identifiers}]`
 - `/api/devices/<vendor>/<model>.json` — full merged record
+- `/api/wanted.json` — open device requests, grouped by id (see "Requests")
 
 The MCP server reads this API remotely (`ODB_API_URL`) or the local repository
 (`ODB_REPO`), so it works before and after the site is online.
+
+## Requests ("wanted")
+
+Someone who cannot find a device, or finds nothing usable, says they want it. A request is a
+GitHub issue opened from `.github/ISSUE_TEMPLATE/wanted.yml` (label `wanted`: vendor, model,
+category, identifiers, goal, policy checkbox). No server: the site reads open issues at build
+time (`core/wanted.ts`).
+
+- **Interest** = the author + every 👍 on the issue. Requests for the same id (`makeId(vendor,
+  model)`) add up; the oldest is the one to vote on.
+- **Visible** in directory search (badge "👍 N want it"; requests for devices not in the
+  directory are searchable entries linking to the issue), on device pages while the status is
+  below `partial-protocol`, on `/wanted/` (ranked) and in `/api/wanted.json`:
+  `[{id, vendor, model, category?, identifiers[], votes, url, issues[], opened}]`.
+- **Triage** (`scripts/wanted-triage.ts`, workflow `wanted.yml`): duplicates are pointed to the
+  first request and closed; a goal the policy screen flags is labelled `policy` for a human;
+  each request gets one comment recording what the registry held (`<!-- odb-triage id rank -->`).
+  A request closes itself, with a link, when its device (same id or a shared identifier, never a
+  fuzzy match) reaches `partial-protocol` or better *after* it was seen; a request for a device
+  that was already usable stays open as interest in more.
+- **Agents** never post: `request_device` and `lookup_device` return the existing request or a
+  pre-filled issue link, and the person reviews and submits it.
+
+Limits: a GitHub account is needed to request or vote; counts refresh every 6 hours and on
+issue events.
 
 ## MCP tools (v0)
 
@@ -97,6 +123,7 @@ The MCP server reads this API remotely (`ODB_API_URL`) or the local repository
 | `lookup_device(vendor?, model?, fcc_id?, usb?, ble_name?)` | best match + full record + live claims; says explicitly "nothing known" when so |
 | `claim_device(id or vendor+model, who, contact, scope, days)` | adds a claim (creates a stub record if needed) |
 | `publish_findings(id, record_patch)` | merges findings into the record, validates, writes it |
+| `request_device(vendor, model, identifiers?, goal?)` | existing request to 👍, or a pre-filled request link; never posts |
 | `list_sources()` | imported sources with record counts and snapshot dates |
 
 In v0 writes go to the local repository checkout; the contributor opens the PR

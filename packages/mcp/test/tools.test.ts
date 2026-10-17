@@ -4,7 +4,7 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { parseRecordYaml, validate } from "@opendevicedb/core";
 import { LocalBackend, RemoteBackend, backendFromEnv, CACHE_TTL_MS, type FetchLike } from "../src/backend.ts";
-import { lookupDevice, searchDevices, claimDevice, publishFindings, listSources, type Context } from "../src/tools.ts";
+import { lookupDevice, searchDevices, claimDevice, publishFindings, listSources, requestDevice, type Context } from "../src/tools.ts";
 import { makeRepo, SKY, TELLO, ARCHER } from "./fixture.ts";
 
 const TODAY = "2026-10-17";
@@ -249,3 +249,64 @@ test("backend selection from env", () => {
   assert.equal(backendFromEnv({ ODB_API_URL: "https://a" }).kind, "remote");
   assert.equal(backendFromEnv({}).kind, "local");
 });
+
+// ---------- requests (request_device, lookup/search integration) ----------
+
+const WANTED = [
+  { id: "parrot/bebop-2", vendor: "Parrot", model: "Bebop 2", category: "drone", identifiers: ["PIYRSQ1"], votes: 5,
+    url: "https://github.com/opendevicedb/opendevicedb/issues/7", issues: [7], opened: "2026-10-17" },
+];
+
+function withRequests(fn: (ctx: Context) => Promise<void>, wanted: unknown = WANTED) {
+  return async () => {
+    const root = makeRepo();
+    const api = new RemoteBackend("https://example.test", {
+      fetch: async (u) => (u.endsWith("/api/wanted.json") ? { ok: true, status: 200, json: async () => wanted } : { ok: false, status: 404, json: async () => null }),
+    });
+    try { await fn({ backend: new LocalBackend(root, { requestsFrom: api }), today: TODAY }); }
+    finally { rmSync(root, { recursive: true, force: true }); }
+  };
+}
+
+test("lookup not found points to the existing request", withRequests(async (ctx) => {
+  const r: any = await lookupDevice(ctx, { vendor: "Parrot", model: "Bebop 2" });
+  assert.equal(r.found, false);
+  assert.equal(r.request.votes, 5);
+  assert.match(r.recommendation, /5 people have already requested it .*issues\/7/);
+  assert.equal(r.request_url, undefined);
+  assert.equal((await lookupDevice(ctx, { fcc_id: "piyrsq1" }) as any).request.id, "parrot/bebop-2");
+}));
+
+test("lookup not found without a request offers a pre-filled request link", withRequests(async (ctx) => {
+  const r: any = await lookupDevice(ctx, { vendor: "Nobody", model: "Zzz 9", usb: "aaaa:bbbb" });
+  const u = new URL(r.request_url);
+  assert.equal(u.searchParams.get("template"), "wanted.yml");
+  assert.equal(u.searchParams.get("model"), "Zzz 9");
+  assert.equal(u.searchParams.get("identifiers"), "USB: aaaa:bbbb");
+  assert.match(r.recommendation, /request_url/);
+}));
+
+test("request_device: available device, existing request, new request, policy", withRequests(async (ctx) => {
+  const avail: any = await requestDevice(ctx, { vendor: "Ryze Tech", model: "Tello" });
+  assert.equal(avail.available, true);
+  assert.equal(avail.id, "ryze/tello");
+  const dup: any = await requestDevice(ctx, { vendor: "parrot", model: "bebop-2" });
+  assert.equal(dup.request.url, WANTED[0].url);
+  assert.match(dup.recommendation, /Do not open a new request/);
+  const fresh: any = await requestDevice(ctx, { vendor: "Acme", model: "Gizmo", goal: "local control" });
+  assert.equal(new URL(fresh.request_url).searchParams.get("goal"), "local control");
+  const bad: any = await requestDevice(ctx, { vendor: "Acme", model: "Gizmo", goal: "remove the geofencing" });
+  assert.equal(bad.ok, false);
+}));
+
+test("search lists matching requests for devices not in the directory", withRequests(async (ctx) => {
+  const r: any = await searchDevices(ctx, { query: "bebop" });
+  assert.equal(r.count, 0);
+  assert.equal(r.requests[0].id, "parrot/bebop-2");
+}));
+
+test("requests are optional: no source or a broken one gives []", withRepo(async (ctx) => {
+  assert.deepEqual(await ctx.backend.wanted(), []);
+  const broken = new RemoteBackend("https://example.test", { fetch: async () => { throw new Error("offline"); } });
+  assert.deepEqual(await broken.wanted(), []);
+}));

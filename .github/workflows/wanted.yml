@@ -1,0 +1,28 @@
+name: Triage device requests
+# Requests are issues labelled "wanted" (.github/ISSUE_TEMPLATE/wanted.yml); see scripts/wanted-triage.ts.
+on:
+  issues:
+    types: [opened, edited, reopened, labeled]
+  schedule:
+    - cron: "47 */6 * * *" # close requests whose device now has a usable result
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: wanted-${{ github.event.issue.number || 'sync' }}
+  cancel-in-progress: false
+jobs:
+  triage:
+    if: github.event_name != 'issues' || contains(github.event.issue.labels.*.name, 'wanted')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 26, cache: npm }
+      - run: npm ci
+      - run: node scripts/wanted-triage.ts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          EVENT: ${{ github.event.action }}

@@ -6,7 +6,7 @@ import Base from "../layouts/Base.astro";
 import StatusBadge from "../components/StatusBadge.astro";
 import { ROOT } from "../lib/data.ts";
 import { REPO_URL, STATUS_HELP } from "../lib/config.ts";
-import { STATUSES } from "@opendevicedb/core";
+import { STATUSES, wantedIssueUrl } from "@opendevicedb/core";
 
 const example = readFileSync(join(ROOT, "data/devices/ryze/tello.yaml"), "utf8");
 const claimExample = `claims:
@@ -62,6 +62,17 @@ const themes = { light: "github-light", dark: "github-dark" } as const;
     </p>
     <Code code={claimExample} lang="yaml" themes={themes} />
     <p>Agents do this with the <code>claim_device</code> tool.</p>
+
+    <h2 id="wanted">Requests: say you want a device</h2>
+    <p>
+      Can't find a device, or nothing usable exists for it yet? <a href={wantedIssueUrl({})}>Request it</a>
+      with the issue form (vendor, model, identifiers, what you want to do with it). Others who want the same device
+      add a 👍 to that issue instead of opening a new one; duplicates are pointed to the first request and closed.
+      The <a href="/wanted/">Wanted</a> page ranks requests by interest, so people who can reverse engineer
+      know where their work helps most. A request closes by itself, with a link, once a usable result
+      (at least <StatusBadge status="partial-protocol" />) reaches the directory.
+    </p>
+    <p>Requests are public GitHub issues and follow the <a href="/policy/">content policy</a>. Agents use the <code>request_device</code> tool, which only builds the link: the person opens it.</p>
 
     <h2 id="verification">Verification levels</h2>
     <p>

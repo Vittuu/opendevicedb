@@ -1,0 +1,86 @@
+name: Request a device
+description: Say you want a device to be reverse engineered or supported. Others add a 👍 to show interest.
+title: "Wanted: <vendor> <model>"
+labels: [wanted]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search [opendevicedb.org/devices](https://opendevicedb.org/devices/) first: if the device is there, add a 👍 to its existing request instead of opening a new one.
+        One issue per device. **Already requested? Add a 👍 to that issue**: that is how interest is counted. This issue is public.
+  - type: input
+    id: vendor
+    attributes:
+      label: Vendor
+      description: Manufacturer or brand, as printed on the device.
+      placeholder: DJI
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      description: Exact model name, as printed on the device or box.
+      placeholder: Neo 2
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - drone
+        - camera
+        - ip-camera
+        - action-camera
+        - router
+        - smart-plug
+        - light
+        - switch
+        - sensor
+        - hub
+        - vacuum-robot
+        - wearable
+        - phone
+        - tablet
+        - e-reader
+        - laptop
+        - single-board
+        - printer
+        - 3d-printer
+        - audio
+        - tv
+        - media-player
+        - game-console
+        - vehicle
+        - radio
+        - toy
+        - appliance
+        - medical
+        - other / not sure
+    validations:
+      required: true
+  - type: textarea
+    id: identifiers
+    attributes:
+      label: Identifiers
+      description: Optional, one per line. They match better than names.
+      placeholder: |
+        FCC ID: SS3-NEO2
+        USB: 2ca3:001f
+        BLE name: NEO2-XXXX
+  - type: textarea
+    id: goal
+    attributes:
+      label: What do you want to do with it?
+      description: e.g. control it locally, keep it working after the vendor cloud shut down, run free firmware.
+    validations:
+      required: true
+  - type: checkboxes
+    id: policy
+    attributes:
+      label: Content policy
+      description: Requests follow the [content policy](https://opendevicedb.org/policy/).
+      options:
+        - label: This request is not about defeating DRM, access control, or a safety or compliance function (Remote ID, geofencing, radio limits).
+          required: true

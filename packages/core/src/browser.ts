@@ -139,3 +139,5 @@ export function search(entries: IndexEntry[], query: string, f: SearchFilters = 
   out.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
   return out.slice(0, f.limit ?? 50);
 }
+
+export * from "./wanted.ts";

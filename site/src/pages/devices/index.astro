@@ -55,6 +55,7 @@ const names = Object.fromEntries([...sources].map(([id, s]) => [id, s.name]));
       {first.map((e) => <li><DeviceRow entry={e} /></li>)}
       {first.length === 0 && <li class="empty">No devices yet.</li>}
     </ul>
+    <p id="request" class="small muted" hidden></p>
     <nav id="pager" class="pager" aria-label="Result pages">
       {pages > 1 && <>
         <button class="btn" data-go="0" disabled>← Previous</button>

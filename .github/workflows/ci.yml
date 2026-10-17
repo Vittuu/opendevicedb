@@ -15,3 +15,4 @@ jobs:
       - run: npm test -w @opendevicedb/core
       - run: npm test -w @opendevicedb/importers
       - run: npm test -w @opendevicedb/mcp
+      - run: node --test scripts/*.test.ts

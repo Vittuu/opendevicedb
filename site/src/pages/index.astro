@@ -5,6 +5,7 @@ import PostItem from "../components/PostItem.astro";
 import { counts, activeClaims, latestCurated, deviceUrl, effectiveStatus, db } from "../lib/data.ts";
 import { posts } from "../lib/news.ts";
 import { PITCH, displayName } from "../lib/config.ts";
+import { openWanted } from "../lib/wanted.ts";
 
 const c = counts();
 const claims = activeClaims().slice(0, 8);
@@ -12,6 +13,7 @@ const news = (await posts()).slice(0, 3);
 const latest = latestCurated(6);
 const fmt = (n: number) => n.toLocaleString("en");
 const { on } = db();
+const mostWanted = (await openWanted()).slice(0, 5);
 ---
 <Base>
   <section class="hero">
@@ -51,6 +53,24 @@ const { on } = db();
           ))}
         </ul>
       )}
+
+      <h2>Most wanted</h2>
+      {mostWanted.length === 0 ? (
+        <p class="empty">No request yet. Can't find a device? <a href="/wanted/">Request it</a> and others can add a 👍.</p>
+      ) : (
+        <ul class="list-plain">
+          {mostWanted.map((w) => (
+            <li>
+              <div class="dev-row">
+                <a class="name" href={w.inRegistry ? deviceUrl(w.id) : w.url}>{displayName(w.vendor, w.model)}</a>
+                <a class="badge wanted" href={w.url}>👍 {w.votes}</a>
+                <span class="meta">{w.category ?? "uncategorised"} · requested {w.opened}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p><a href="/wanted/">All requests</a></p>
 
       <h2>Recently updated</h2>
       {latest.length === 0 ? <p class="empty">No curated record yet.</p> : (

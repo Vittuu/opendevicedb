@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import {
   loadAll, loadCurated, loadSnapshots, toIndexEntry, today, REPO_ROOT,
-  type DeviceRecord, type IndexEntry, type Status,
+  type DeviceRecord, type IndexEntry, type Status, type WantedEntry,
 } from "@opendevicedb/core";
 
 export interface SourceInfo {
@@ -35,6 +35,8 @@ export interface Backend {
   /** Full merged record, or null. */
   get(id: string): Promise<DeviceRecord | null>;
   sources(): Promise<SourcesInfo>;
+  /** Open device requests (SPEC.md "Requests"); [] when unavailable. */
+  wanted(): Promise<WantedEntry[]>;
 }
 
 // ---------- local repository ----------
@@ -43,10 +45,14 @@ export class LocalBackend implements Backend {
   readonly kind = "local" as const;
   readonly root: string;
   readonly location: string;
-  constructor(root: string) {
+  /** Requests are GitHub issues, not files: a local checkout reads them from the public API. */
+  private requests?: RemoteBackend;
+  constructor(root: string, opts: { requestsFrom?: RemoteBackend } = {}) {
     this.root = root;
     this.location = root;
+    this.requests = opts.requestsFrom;
   }
+  async wanted() { return this.requests ? this.requests.wanted().catch(() => []) : []; }
   // Re-read on every call: the repository is small and may change under us (git pull, edits).
   async records() { return loadAll(this.root); }
   async index(on = today()) { return loadAll(this.root).map((r) => toIndexEntry(r, on)); }
@@ -123,6 +129,11 @@ export class RemoteBackend implements Backend {
     return this.getJson(`/api/devices/${id}.json`);
   }
 
+  async wanted(): Promise<WantedEntry[]> {
+    const data = await this.getJson("/api/wanted.json").catch(() => null);
+    return Array.isArray(data) ? data : [];
+  }
+
   async sources(): Promise<SourcesInfo> {
     const index = await this.index();
     // Optional richer endpoint (not in SPEC v0); fall back to counting index entries per source.
@@ -147,8 +158,9 @@ export const DEFAULT_API_URL = "https://opendevicedb.org";
 /** ODB_REPO (local, writable) wins over ODB_API_URL (remote, read-only); default: this checkout
  *  when run from one, otherwise the public site (npm install). */
 export function backendFromEnv(env: Record<string, string | undefined> = process.env): Backend {
-  if (env.ODB_REPO) return new LocalBackend(resolve(env.ODB_REPO));
-  if (env.ODB_API_URL) return new RemoteBackend(env.ODB_API_URL);
-  if (existsSync(join(REPO_ROOT, "data/devices"))) return new LocalBackend(REPO_ROOT);
-  return new RemoteBackend(DEFAULT_API_URL);
+  const api = new RemoteBackend(env.ODB_API_URL || DEFAULT_API_URL);
+  if (env.ODB_REPO) return new LocalBackend(resolve(env.ODB_REPO), { requestsFrom: api });
+  if (env.ODB_API_URL) return api;
+  if (existsSync(join(REPO_ROOT, "data/devices"))) return new LocalBackend(REPO_ROOT, { requestsFrom: api });
+  return api;
 }

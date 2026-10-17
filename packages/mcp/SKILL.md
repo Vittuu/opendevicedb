@@ -9,7 +9,7 @@ license: CC0-1.0
 OpenDeviceDB is an open directory of devices whose protocols or firmware have already been
 reverse engineered, with live "claims" saying who is working on what. It is reached through
 the `opendevicedb` MCP server (tools `lookup_device`, `search_devices`, `claim_device`,
-`publish_findings`, `list_sources`).
+`publish_findings`, `request_device`, `list_sources`).
 
 ## Before any reverse-engineering work
 
@@ -22,7 +22,10 @@ the `opendevicedb` MCP server (tools `lookup_device`, `search_devices`, `claim_d
      missing part.
    - **live claim by someone else**: tell the user who holds it, its scope and expiry, and
      the contact. Do not duplicate it; pick another scope or coordinate.
-   - **found: false / nothing public known**: go on.
+   - **found: false / nothing public known**: go on. If the user does not want to reverse
+     engineer it themselves, give them the `request.url` (to add a 👍 to the existing request)
+     or the `request_url` (a pre-filled public GitHub issue they review and submit), or call
+     `request_device`. Never submit a request yourself.
 3. If you are going to work on it, call `claim_device` (who = the user, contact, a precise
    scope, days ≤ 90) and give the user the git / `gh pr create` command from the result so
    the claim becomes visible.
