@@ -17,6 +17,7 @@ import klipper from "./sources/klipper.ts";
 import rockbox from "./sources/rockbox.ts";
 import gadgetbridge from "./sources/gadgetbridge.ts";
 import valetudo from "./sources/valetudo.ts";
+import cloudcutter from "./sources/cloudcutter.ts";
 import type { Source } from "./lib.ts";
 
 export * from "./lib.ts";
@@ -25,5 +26,5 @@ export * from "./lib.ts";
 export const SOURCES: Source[] = [
   zigbee2mqtt, openwrt, tasmota, esphome, thingino,
   zwaveJs, tuyaLocal, openrgb, libgphoto2, lineageos, postmarketos, coreboot, rtl433, marlin, klipper, rockbox,
-  gadgetbridge, valetudo,
+  gadgetbridge, valetudo, cloudcutter,
 ];
