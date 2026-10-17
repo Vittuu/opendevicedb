@@ -1,0 +1,23 @@
+{
+  "name": "@opendevicedb/mcp",
+  "version": "0.1.0",
+  "description": "MCP server for OpenDeviceDB: look up, claim and publish reverse-engineered device protocols",
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "bin": {
+    "opendevicedb-mcp": "./src/server.ts"
+  },
+  "exports": {
+    ".": "./src/tools.ts"
+  },
+  "scripts": {
+    "start": "node src/server.ts",
+    "cli": "node src/cli.ts",
+    "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@opendevicedb/core": "0.1.0",
+    "zod": "^4.6.7"
+  }
+}
