@@ -1,0 +1,6 @@
+---
+import { STATUS_LABEL, STATUS_HELP } from "../lib/config.ts";
+interface Props { status: string; large?: boolean }
+const { status, large } = Astro.props;
+---
+<span class:list={["badge", `s-${status}`, { lg: large }]} title={STATUS_HELP[status]}>{STATUS_LABEL[status] ?? status}</span>

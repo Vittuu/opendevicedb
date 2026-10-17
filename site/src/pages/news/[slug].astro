@@ -1,0 +1,30 @@
+---
+import { render } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import { posts, fmtDate, type Post } from "../../lib/news.ts";
+import { REPO_URL } from "../../lib/config.ts";
+
+export async function getStaticPaths() {
+  return (await posts()).map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+const { post } = Astro.props as { post: Post };
+const { Content } = await render(post);
+---
+<Base title={post.data.title} description={post.data.summary}>
+  <article class="post prose">
+    <p class="crumbs" style="margin-top:26px"><a href="/news/">News</a></p>
+    <h1>{post.data.title}</h1>
+    <div class="post-meta">
+      <time datetime={fmtDate(post.data.date)}>{fmtDate(post.data.date)}</time>
+      {post.data.draft && <span class="tag draft">draft</span>}
+      {post.data.tags.map((t) => <span class="tag">{t}</span>)}
+    </div>
+    <p class="lede">{post.data.summary}</p>
+    <Content />
+    <hr />
+    <p class="small muted">
+      <a href={`${REPO_URL}/edit/main/news/${post.id}.md`}>Edit this post on GitHub</a> ·
+      Licensed CC BY-SA 4.0.
+    </p>
+  </article>
+</Base>

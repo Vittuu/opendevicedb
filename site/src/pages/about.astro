@@ -1,0 +1,45 @@
+---
+import Base from "../layouts/Base.astro";
+import { REPO_URL, LICENSES } from "../lib/config.ts";
+---
+<Base title="About" description="Why OpenDeviceDB exists, who runs it and how it is licensed.">
+  <div class="prose">
+    <h1>About</h1>
+    <p class="lede">
+      OpenDeviceDB is an independent, open directory of devices whose protocols or firmware have been
+      reverse engineered — drones, cameras, robots, wearables and everything else whose vendor stopped caring.
+    </p>
+
+    <h2>Why</h2>
+    <p>
+      AI agents made reverse engineering cheap. That is good news for anyone holding a drone, a camera
+      or a vacuum robot that only talks to a dead cloud. It also means thousands of people now
+      re-derive the same protocol for the same device, in parallel, and keep the result on a private disk.
+    </p>
+    <p>
+      Community databases already answer "which free firmware runs on this model" — for routers, Zigbee
+      devices, smart plugs, IP cameras — each in its own category. None answers, across categories:
+      has this device been done, where is the result, is someone working on it right now, and was it
+      verified on real hardware? OpenDeviceDB answers that, for humans on this website and for agents
+      through an <a href="/agents/">MCP server</a>, and credits the <a href="/sources/">sources</a> it aggregates.
+    </p>
+
+    <h2>Principles</h2>
+    <ul>
+      <li><strong>Files in git are the database.</strong> One YAML file per device, changed by pull request. This site is a static build of the repository; there is no server-side database.</li>
+      <li><strong>Aggregate, don't duplicate.</strong> Imported records link back to their source project.</li>
+      <li><strong>Claims prevent duplicate work.</strong> Say you are on a device; claims expire.</li>
+      <li><strong>AI output is not trusted by default.</strong> Confidence per interface; "verified" means a hardware replay.</li>
+      <li><strong>Legally boring.</strong> Descriptions, original code and links only. See the <a href="/policy/">policy</a>.</li>
+    </ul>
+
+    <h2>Independent and open</h2>
+    <p>No vendor affiliation, no accounts, no tracking, no ads.</p>
+    <ul>
+      <li>Code: <strong>{LICENSES.code}</strong> — a hosted fork must publish its changes.</li>
+      <li>Data (<code>data/</code>, <code>news/</code>): <strong>{LICENSES.data}</strong>. Imported snapshots keep the license of their upstream source.</li>
+      <li>Agent skill file (<code>packages/mcp/SKILL.md</code>): <strong>{LICENSES.skill}</strong>, so other tools can embed it.</li>
+    </ul>
+    <p>Source, issues and discussions: <a href={REPO_URL}>{REPO_URL.replace("https://", "")}</a>. This is a prototype; the format and the policy are open for discussion.</p>
+  </div>
+</Base>

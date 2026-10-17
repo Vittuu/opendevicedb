@@ -1,0 +1,69 @@
+---
+import Base from "../../layouts/Base.astro";
+import DeviceRow from "../../components/DeviceRow.astro";
+import { db, facet, sourceFacet, sourceName } from "../../lib/data.ts";
+import { STATUS_LABEL } from "../../lib/config.ts";
+import { STATUSES } from "@opendevicedb/core";
+
+const PAGE = 50;
+const { index, sources } = db();
+const first = index.slice(0, PAGE);
+const pages = Math.max(1, Math.ceil(index.length / PAGE));
+const statusCounts = new Map(facet("status"));
+const names = Object.fromEntries([...sources].map(([id, s]) => [id, s.name]));
+---
+<Base title="Devices" description="Search every device known to OpenDeviceDB by name, alias, FCC ID, USB vid:pid, BLE name or chip.">
+  <h1>Devices</h1>
+  <p class="lede">
+    Search by vendor, model, alias or identifier (FCC ID, USB <code>vid:pid</code>, BLE name, chip, SKU, Zigbee model).
+    Results combine curated records and the <a href="/sources/">aggregated sources</a>.
+  </p>
+  <section id="directory" data-sources={JSON.stringify(names)}>
+    <form class="filters" role="search" action="/devices/" method="get">
+      <div>
+        <label for="q">Search</label>
+        <input id="q" name="q" type="search" placeholder="e.g. tello, archer c7, 2fe3:0001" autocomplete="off" spellcheck="false" />
+      </div>
+      <div>
+        <label for="category">Category</label>
+        <select id="category" name="category">
+          <option value="">All categories</option>
+          {facet("category").map(([c, n]) => <option value={c}>{c} ({n.toLocaleString("en")})</option>)}
+        </select>
+      </div>
+      <div>
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          <option value="">Any status</option>
+          {STATUSES.map((s) => <option value={s}>{STATUS_LABEL[s]} ({(statusCounts.get(s) ?? 0).toLocaleString("en")})</option>)}
+        </select>
+      </div>
+      <div>
+        <label for="source">Source</label>
+        <select id="source" name="source">
+          <option value="">All sources</option>
+          {sourceFacet().map(([s, n]) => <option value={s}>{sourceName(s)} ({n.toLocaleString("en")})</option>)}
+        </select>
+      </div>
+    </form>
+    <noscript><p class="muted small">Search and filters need JavaScript. Without it, the full list is in <a href="/api/index.json">/api/index.json</a>.</p></noscript>
+    <div class="results-bar">
+      <span id="count" aria-live="polite">{index.length.toLocaleString("en")} devices</span>
+      <span class="small"><a href="/api/index.json">index.json</a></span>
+    </div>
+    <ul id="results" class="results list-plain">
+      {first.map((e) => <li><DeviceRow entry={e} /></li>)}
+      {first.length === 0 && <li class="empty">No devices yet.</li>}
+    </ul>
+    <nav id="pager" class="pager" aria-label="Result pages">
+      {pages > 1 && <>
+        <button class="btn" data-go="0" disabled>← Previous</button>
+        <span class="muted">Page 1 of {pages.toLocaleString("en")}</span>
+        <button class="btn" data-go="2">Next →</button>
+      </>}
+    </nav>
+  </section>
+  <script>
+    import "../../scripts/directory.ts";
+  </script>
+</Base>

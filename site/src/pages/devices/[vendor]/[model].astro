@@ -1,0 +1,151 @@
+---
+import type { DeviceRecord } from "@opendevicedb/core";
+import Base from "../../../layouts/Base.astro";
+import StatusBadge from "../../../components/StatusBadge.astro";
+import { db, effectiveStatus, liveClaims, editUrl, jsonUrl } from "../../../lib/data.ts";
+import { STATUS_HELP, displayName } from "../../../lib/config.ts";
+
+export function getStaticPaths() {
+  return db().records.map((record) => {
+    const [vendor, model] = record.id.split("/");
+    return { params: { vendor, model }, props: { record } };
+  });
+}
+
+const { record: r } = Astro.props as { record: DeviceRecord };
+const { on, curatedIds, sources } = db();
+const status = effectiveStatus(r, on);
+const live = liveClaims(r, on);
+const expired = (r.claims ?? []).filter((c) => !live.includes(c));
+const verified = (r.verification ?? []).filter((v) => v.method === "hardware-replay");
+const ids = Object.entries(r.identifiers ?? {}).filter(([, v]) => v && v.length);
+const curated = curatedIds.has(r.id);
+const vendorSupport: Record<string, string> = {
+  active: "Active — the vendor still runs its service",
+  degraded: "Degraded — parts of the vendor service are gone",
+  discontinued: "Discontinued — the vendor no longer supports it",
+  unknown: "Unknown",
+};
+const contactHref = (c: string) => /^https?:\/\//.test(c) ? c : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c) ? `mailto:${c}` : undefined;
+const isUrl = (s: string) => /^https?:\/\//.test(s);
+const desc = r.summary ?? `${r.vendor} ${r.model} (${r.category}): ${STATUS_HELP[status]}`;
+---
+<Base title={displayName(r.vendor, r.model)} description={desc}>
+  <link slot="head" rel="alternate" type="application/json" href={jsonUrl(r.id)} />
+  <div class="dev-head">
+    <p class="crumbs"><a href="/devices/">Devices</a> / <a href={`/devices/?category=${r.category}`}>{r.category}</a></p>
+    <h1>{displayName(r.vendor, r.model)}</h1>
+    {r.aliases && r.aliases.length > 0 && <p class="aka">Also known as {r.aliases.join(", ")}</p>}
+    <div class="row">
+      <StatusBadge status={status} large />
+      {verified.length > 0 && <span class="badge lg verified">Verified on hardware</span>}
+      {r.provenance?.ai_assisted && <span class="badge lg neutral">AI-assisted</span>}
+      {!curated && <span class="badge lg neutral">Imported</span>}
+    </div>
+    <p class="muted small">{STATUS_HELP[status]}</p>
+  </div>
+
+  {r.summary && <p class="prose" style="font-size:1.05rem">{r.summary}</p>}
+
+  <dl class="facts card" style="margin-top:18px">
+    <dt>ID</dt><dd class="mono">{r.id}</dd>
+    <dt>Category</dt><dd>{r.category}</dd>
+    <dt>Vendor support</dt><dd>{vendorSupport[r.vendor_support ?? "unknown"] ?? r.vendor_support}</dd>
+    {ids.map(([k, v]) => <><dt>{k.replace("_", " ")}</dt><dd class="mono">{v!.join(", ")}</dd></>)}
+    <dt>Updated</dt><dd>{r.updated}</dd>
+  </dl>
+
+  <div class="actions">
+    <a class="btn primary" href={editUrl(r)}>{curated ? "Edit this record on GitHub" : "Curate this record on GitHub"}</a>
+    <a class="btn" href={jsonUrl(r.id)}>JSON</a>
+    <a class="btn" href="/contribute/#claims">Claim this device</a>
+  </div>
+
+  <h2 id="claims">Being worked on</h2>
+  {live.length === 0 ? (
+    <p class="section-empty">No live claim. If you start working on this device, <a href="/contribute/#claims">claim it</a> so nobody duplicates your work.</p>
+  ) : (
+    <div class="stack">
+      {live.map((c) => (
+        <div class="card claim">
+          <strong>{c.who}</strong> — {c.scope}
+          <div class="small muted">
+            since {c.since}, until {c.expires}
+            {c.agent && <> · agent: {c.agent}</>}
+          </div>
+          <div class="small">Contact: {contactHref(c.contact) ? <a href={contactHref(c.contact)}>{c.contact}</a> : c.contact}</div>
+        </div>
+      ))}
+    </div>
+  )}
+  {expired.length > 0 && (
+    <details style="margin-top:10px"><summary class="small muted">{expired.length} expired claim{expired.length > 1 ? "s" : ""}</summary>
+      <ul class="small">{expired.map((c) => <li>{c.who} — {c.scope} ({c.since} → {c.expires})</li>)}</ul>
+    </details>
+  )}
+
+  <h2 id="interfaces">Interfaces</h2>
+  {(r.interfaces ?? []).length === 0 ? <p class="section-empty">No interface documented yet.</p> : (
+    <div class="table-wrap"><table class="stackable">
+      <thead><tr><th>Interface</th><th>Transport</th><th>Status</th><th>Confidence</th><th>Spec / notes</th></tr></thead>
+      <tbody>
+        {r.interfaces!.map((i) => (
+          <tr>
+            <td data-label="Interface">{i.name}</td>
+            <td data-label="Transport">{i.transport}</td>
+            <td data-label="Status">{i.status}</td>
+            <td data-label="Confidence">{i.confidence ?? <span class="muted">not stated</span>}</td>
+            <td data-label="Spec / notes">{i.spec && <a href={i.spec}>spec</a>}{i.spec && i.notes && " · "}{i.notes}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table></div>
+  )}
+
+  <h2 id="projects">Projects</h2>
+  {(r.projects ?? []).length === 0 ? <p class="section-empty">No known project yet.</p> : (
+    <div class="table-wrap"><table class="stackable">
+      <thead><tr><th>Project</th><th>Kind</th><th>Origin</th><th>License</th></tr></thead>
+      <tbody>
+        {r.projects!.map((p) => (
+          <tr>
+            <td data-label="Project"><a href={p.url}>{p.name}</a></td>
+            <td data-label="Kind">{p.kind}</td>
+            <td data-label="Origin">{p.official ? "official (vendor)" : "community"}</td>
+            <td data-label="License">{p.license ?? <span class="muted">not stated</span>}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table></div>
+  )}
+
+  <h2 id="verification">Verification</h2>
+  {(r.verification ?? []).length === 0 ? (
+    <p class="section-empty">Not verified. A "verified on hardware" badge requires a replayable test (<code>hardware-replay</code>) run on a real device with a stated firmware version.</p>
+  ) : (
+    <ul class="list-plain">
+      {r.verification!.map((v) => (
+        <li>
+          <span class:list={["badge", v.method === "hardware-replay" ? "verified" : "neutral"]}>{v.method === "hardware-replay" ? "Verified on hardware" : v.method}</span>
+          {" "}by {v.by}, {v.date}{v.firmware && <>, firmware <code>{v.firmware}</code></>}
+          {v.notes && <div class="small muted">{v.notes}</div>}
+        </li>
+      ))}
+    </ul>
+  )}
+
+  <h2 id="provenance">Provenance</h2>
+  <ul>
+    {(r.provenance?.sources ?? []).map((s) => {
+      const info = sources.get(s);
+      return info ? (
+        <li><a href={info.url}>{info.name}</a> <span class="muted small">({info.license}{info.fetched_at && `, fetched ${info.fetched_at.slice(0, 10)}`}) · <a href={`/sources/#${info.id}`}>about this source</a></span></li>
+      ) : isUrl(s) ? <li><a href={s}>{s}</a></li> : <li>{s}</li>;
+    })}
+    {(r.provenance?.sources ?? []).length === 0 && <li class="muted">No source recorded.</li>}
+  </ul>
+  <p class="small">
+    {r.provenance?.ai_assisted ? <><span class="badge neutral">AI-assisted</span> Parts of this record were produced with AI tools{r.provenance.tools?.length ? <> ({r.provenance.tools.join(", ")})</> : null}; check the confidence of each interface.</> : r.provenance?.ai_assisted === false ? "Not flagged as AI-assisted." : "AI assistance not stated."}
+  </p>
+  <p class="small muted">Status and claims as of the build date ({on}). Data licensed CC BY-SA 4.0; imported data keeps its upstream license.</p>
+</Base>

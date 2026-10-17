@@ -1,0 +1,89 @@
+---
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { Code } from "astro:components";
+import Base from "../layouts/Base.astro";
+import StatusBadge from "../components/StatusBadge.astro";
+import { ROOT } from "../lib/data.ts";
+import { REPO_URL, STATUS_HELP } from "../lib/config.ts";
+import { STATUSES } from "@opendevicedb/core";
+
+const example = readFileSync(join(ROOT, "data/devices/ryze/tello.yaml"), "utf8");
+const claimExample = `claims:
+  - who: Jane Doe
+    contact: https://github.com/janedoe
+    scope: BLE control protocol
+    since: 2026-10-17
+    expires: 2026-11-16
+    agent: claude-code`;
+const verificationExample = `verification:
+  - method: hardware-replay
+    by: Jane Doe
+    date: 2026-11-10
+    firmware: "1.4.2"
+    notes: tests/replay_takeoff_land.py passes on two units`;
+const themes = { light: "github-light", dark: "github-dark" } as const;
+---
+<Base title="Contribute" description="How to add or improve a device record, claim a device you are working on, and how verification works.">
+  <div class="prose">
+    <h1>Contribute</h1>
+    <p class="lede">
+      The database is a set of YAML files in git. Everything — new devices, findings, claims —
+      arrives as a pull request, by hand or through the <a href="/agents/">MCP server</a>.
+    </p>
+
+    <h2 id="workflow">Pull request workflow</h2>
+    <ol>
+      <li>Fork <a href={REPO_URL}>the repository</a> (or use "Edit this record on GitHub" on any device page).</li>
+      <li>Add or edit <code>data/devices/&lt;vendor&gt;/&lt;model&gt;.yaml</code>. The id is <code>&lt;vendor-slug&gt;/&lt;model-slug&gt;</code>, lowercase <code>a-z 0-9 -</code>.</li>
+      <li>Run <code>npm install &amp;&amp; npm run validate</code>: every record is checked against <a href={`${REPO_URL}/blob/main/schema/device.schema.json`}><code>schema/device.schema.json</code></a>.</li>
+      <li>Open the pull request. Say what you checked yourself and what an AI tool produced.</li>
+    </ol>
+    <p>
+      A curated file overrides an imported record with the same id: to enrich a device that came from
+      another database, create its curated file — device pages for imported records link to a prefilled one.
+    </p>
+
+    <h2 id="format">Record format</h2>
+    <p>A real record, <code>data/devices/ryze/tello.yaml</code>:</p>
+    <Code code={example} lang="yaml" themes={themes} />
+    <p class="small muted">The <a href={`${REPO_URL}/blob/main/SPEC.md`}>specification</a> describes every field; the JSON Schema is normative.</p>
+
+    <h2 id="status">Status levels</h2>
+    <ul class="list-plain">
+      {STATUSES.map((s) => <li><StatusBadge status={s} /> <span class="muted">— {STATUS_HELP[s]}</span></li>)}
+    </ul>
+
+    <h2 id="claims">Claims: say you are on it</h2>
+    <p>
+      Before you start reverse engineering a device, add a claim. It shows the device as
+      <StatusBadge status="in-progress" /> on the site and in agents' lookups, with your contact,
+      so nobody starts the same job in parallel. Claims expire (90 days at most); renew or publish.
+    </p>
+    <Code code={claimExample} lang="yaml" themes={themes} />
+    <p>Agents do this with the <code>claim_device</code> tool.</p>
+
+    <h2 id="verification">Verification levels</h2>
+    <p>
+      AI-produced protocol descriptions can be confidently wrong. Each interface carries a
+      <code>confidence</code> (<code>low</code>, <code>medium</code>, <code>high</code>), and each record a <code>verification</code> list:
+    </p>
+    <ul>
+      <li><strong><code>hardware-replay</code></strong> — a replayable test (script, capture replay) was run on a real device, with the firmware version stated. Only this earns the <span class="badge verified">Verified on hardware</span> badge.</li>
+      <li><strong><code>manual</code></strong> — someone tried it by hand on a real device.</li>
+      <li><strong><code>none</code></strong> — not verified; desk research or captures only.</li>
+    </ul>
+    <Code code={verificationExample} lang="yaml" themes={themes} />
+    <p>Set <code>provenance.ai_assisted: true</code> whenever an AI tool wrote part of the record, and list the tools.</p>
+
+    <h2 id="policy">What we accept</h2>
+    <p>
+      Protocol descriptions, original open-source code and links — never firmware images, vendor code
+      or keys, and nothing that defeats a safety function (Remote ID, geofencing, radio limits…).
+      Read the <a href="/policy/">content policy</a>.
+    </p>
+
+    <h2 id="news">News posts</h2>
+    <p>Add <code>news/YYYY-MM-DD-slug.md</code> with <code>title</code>, <code>date</code>, <code>summary</code> and <code>tags</code> in the frontmatter.</p>
+  </div>
+</Base>
