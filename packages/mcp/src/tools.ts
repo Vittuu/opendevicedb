@@ -130,7 +130,13 @@ export function recommend(r: DeviceRecord, on: string): string {
     parts.push("Listed, but nothing public is known about its protocol yet: call claim_device before you start, then publish_findings when done.");
   }
   if (live.length && status !== "in-progress") parts.push(`Live claim: ${claimText}.`);
-  if (rank(status) >= rank("partial-protocol") && !verified) parts.push("Not verified on hardware: treat it as a lead and confirm with a replay test.");
+  // Imported records come from projects that maintain their own hardware support lists.
+  const upstream = (r.provenance?.sources ?? []).filter((s) => s !== "curated");
+  if (rank(status) >= rank("partial-protocol") && !verified) {
+    parts.push(upstream.length
+      ? `Support is maintained upstream (${upstream.join(", ")}): check its page for your exact hardware revision.`
+      : "Not verified on hardware: treat it as a lead and confirm with a replay test.");
+  }
   if (SENSITIVE_CATEGORIES.includes(r.category)) parts.push("Policy: never work on Remote ID, geofencing or other safety/compliance functions (POLICY.md).");
   return parts.join(" ");
 }
