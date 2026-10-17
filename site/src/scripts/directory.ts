@@ -1,7 +1,7 @@
 // Directory search island. Loads /api/index.json lazily (first interaction, or at once when
 // the URL already carries a query), then runs core's own `search` in the browser and renders
 // one page of results at a time — never the whole index in the DOM.
-import { search, type IndexEntry } from "@opendevicedb/core";
+import { search, type IndexEntry } from "@opendevicedb/core/browser";
 import { STATUS_LABEL, displayName } from "../lib/config.ts";
 
 const PAGE = 50;
