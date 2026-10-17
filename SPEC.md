@@ -132,3 +132,22 @@ In v0 writes go to the local repository checkout; the contributor opens the PR
 ## Out of scope for v0
 
 Accounts, comments, a write API, hosting of binaries, automatic verification.
+
+## Roadmap (ideas, to be specified before any code)
+
+- **R1 — Guided installer.** From a device page, walk a non-developer through putting the
+  open firmware or software on it. Reuse each project's own installer rather than writing a
+  flasher: ESP Web Tools (WebSerial, in the browser) for ESPHome, Tasmota and OpenBeken,
+  tuya-cloudcutter for Tuya devices over the air, the OpenWrt Firmware Selector, the
+  LineageOS and postmarketOS install guides, Valetudo… Records would gain an `install`
+  block: method, official installer URL, difficulty, tools needed, bricking risk, how to go
+  back to stock. First step is data plus guide pages; in-browser flashing only where the
+  upstream installer already supports it. No guided flashing of mains-powered appliances
+  that must be opened. (Owner, 2026-10-17; also asked for in comments on the launch post.)
+- **R2 — Preserving open binaries (BitTorrent).** Keep open builds available when a
+  project's download server disappears. Limits from P5: only binaries whose licence allows
+  redistribution, never vendor images; GPL binaries travel with their corresponding source;
+  each record stores the hash (and upstream signature when there is one) checked against
+  upstream at capture time, plus the magnet link. Existing archives come first (Internet
+  Archive for binaries, Software Heritage for source). Needs a legal review before
+  anything is seeded. (Owner, 2026-10-17.)
