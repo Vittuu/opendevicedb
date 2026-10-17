@@ -1,0 +1,69 @@
+---
+import Base from "../layouts/Base.astro";
+import { REPO_URL } from "../lib/config.ts";
+const site = Astro.site!.origin;
+const jsonConfig = JSON.stringify({
+  mcpServers: {
+    opendevicedb: { command: "npx", args: ["-y", "@opendevicedb/mcp"], env: { ODB_API_URL: site } },
+  },
+}, null, 2);
+---
+<Base title="For AI agents" description="Install the OpenDeviceDB MCP server so your agent checks the directory before reverse engineering a device, claims it, and publishes its findings.">
+  <div class="prose">
+    <h1>For AI agents</h1>
+    <p class="lede">
+      Reverse engineering with an agent is cheap; doing it twice is waste. Give your agent the
+      OpenDeviceDB MCP server and it will check the directory before it starts, claim the device
+      while it works, and publish what it found when it is done.
+    </p>
+
+    <h2 id="install">Install the MCP server</h2>
+    <p><strong>Claude Code</strong> (the published package — eventual form, once <code>@opendevicedb/mcp</code> is on npm):</p>
+    <pre><code>claude mcp add opendevicedb -- npx -y @opendevicedb/mcp</code></pre>
+
+    <p><strong>From a checkout</strong> (works today, and is the mode that can write claims and findings):</p>
+    <pre><code>git clone {REPO_URL}
+cd opendevicedb &amp;&amp; npm install
+claude mcp add opendevicedb -e ODB_REPO="$PWD" -- node "$PWD/packages/mcp/src/server.ts"</code></pre>
+    <p class="small muted">Node 22.18+ runs the TypeScript sources directly. <code>npm run mcp</code> starts the same server on stdio.</p>
+
+    <h3 id="remote">Remote, read-only mode</h3>
+    <p>
+      Without a checkout, point the server at this website's static API with <code>ODB_API_URL</code>.
+      Lookups and searches work; claims and publications need a checkout (<code>ODB_REPO</code>), because
+      writes go through a pull request.
+    </p>
+    <pre><code>claude mcp add opendevicedb -e ODB_API_URL={site} -- npx -y @opendevicedb/mcp</code></pre>
+    <p>Other MCP clients (Claude Desktop, Cursor, Codex…) take the same server in their JSON config:</p>
+    <pre><code>{jsonConfig}</code></pre>
+    <p class="small muted">
+      If both are set, <code>ODB_REPO</code> wins. With neither, the server reads the checkout it runs from.
+    </p>
+
+    <h2 id="workflow">The workflow</h2>
+    <ol>
+      <li><strong>Look up</strong> — <code>lookup_device</code> with every identifier you have (FCC ID, USB <code>vid:pid</code>, BLE name, Zigbee model, then vendor + model). It says what exists, who is working on it, and what to do next. <code>search_devices</code> explores by name.</li>
+      <li><strong>Claim</strong> — nothing usable exists? <code>claim_device</code> with who you are, a contact, the scope ("BLE control protocol") and a duration (30 days by default, 90 max). Others now see the device as <em>in progress</em>.</li>
+      <li><strong>Work</strong> — capture, decode, write the SDK or firmware. Host the code and docs in your own repository under an open license.</li>
+      <li><strong>Publish</strong> — <code>publish_findings</code> merges interfaces (with an honest <code>confidence</code>), projects, identifiers and verification into the record, validates it against the schema, and refuses content the <a href="/policy/">policy</a> excludes. Flag <code>provenance.ai_assisted</code> truthfully. Publish partial results too: a documented telemetry channel already saves the next person a week.</li>
+      <li><strong>Pull request</strong> — the tool prints the exact <code>git</code> / <code>gh pr create</code> commands. A human reviews, CI validates, and the record goes live on the next build.</li>
+    </ol>
+
+    <h2 id="trust">What agents should know</h2>
+    <ul>
+      <li>Records from imported databases are slim: a name, a status and a link back. Follow the link.</li>
+      <li>AI output is not trusted by default. "Verified on hardware" means a replayable test (<code>hardware-replay</code>) was run on a real device with a stated firmware version — nothing less.</li>
+      <li>Claims expire. An expired claim is ignored; a live one comes with a contact — use it before duplicating the work.</li>
+      <li>Never publish firmware images, vendor code, keys, or anything defeating Remote ID, geofencing, radio limits or other safety functions.</li>
+    </ul>
+
+    <h2 id="api">Static API</h2>
+    <p>The same data, as plain JSON (what the server reads in remote mode):</p>
+    <ul>
+      <li><a href="/api/index.json"><code>/api/index.json</code></a> — every device: <code>id, vendor, model, aliases, category, status, sources, identifiers, claims, verified, updated</code></li>
+      <li><code>/api/devices/&lt;vendor&gt;/&lt;model&gt;.json</code> — the full merged record, e.g. <a href="/api/devices/ryze/tello.json"><code>/api/devices/ryze/tello.json</code></a></li>
+      <li><a href="/api/sources.json"><code>/api/sources.json</code></a> — imported sources with licenses, snapshot dates and counts</li>
+    </ul>
+    <p class="small muted">The agent skill file shipped with the server (<code>packages/mcp/SKILL.md</code>) is CC0, so other tools can embed it.</p>
+  </div>
+</Base>

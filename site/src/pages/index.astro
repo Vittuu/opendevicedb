@@ -1,0 +1,89 @@
+---
+import Base from "../layouts/Base.astro";
+import StatusBadge from "../components/StatusBadge.astro";
+import PostItem from "../components/PostItem.astro";
+import { counts, activeClaims, latestCurated, deviceUrl, effectiveStatus, db } from "../lib/data.ts";
+import { posts } from "../lib/news.ts";
+import { PITCH, displayName } from "../lib/config.ts";
+
+const c = counts();
+const claims = activeClaims().slice(0, 8);
+const news = (await posts()).slice(0, 3);
+const latest = latestCurated(6);
+const fmt = (n: number) => n.toLocaleString("en");
+const { on } = db();
+---
+<Base>
+  <section class="hero">
+    <h1>Before you reverse engineer a device, check if someone already did.</h1>
+    <p class="lede">{PITCH}</p>
+    <form class="search-big" role="search" action="/devices/" method="get">
+      <label for="home-q" class="sr-only">Search devices</label>
+      <input id="home-q" name="q" type="search" placeholder="Model, vendor, FCC ID, USB vid:pid…" autocomplete="off" spellcheck="false" />
+      <button class="btn primary" type="submit">Search</button>
+    </form>
+    <p class="small muted">Try <a href="/devices/?q=tello">tello</a>, <a href="/devices/?q=car+thing">car thing</a>, or browse <a href="/devices/">all devices</a>.</p>
+  </section>
+
+  <div class="counters" aria-label="Directory counters">
+    <a class="counter" href="/devices/"><strong>{fmt(c.devices)}</strong><span>devices</span></a>
+    <a class="counter" href="/sources/"><strong>{fmt(c.sources)}</strong><span>aggregated sources</span></a>
+    <a class="counter" href="/devices/?status=open-firmware" style="--st: var(--st-open-firmware)"><strong>{fmt(c.byStatus["open-firmware"])}</strong><span><i class="dot"></i>open firmware</span></a>
+    <a class="counter" href="/devices/?status=controllable" style="--st: var(--st-controllable)"><strong>{fmt(c.byStatus.controllable)}</strong><span><i class="dot"></i>controllable</span></a>
+    <a class="counter" href="/devices/?status=in-progress" style="--st: var(--st-in-progress)"><strong>{fmt(c.byStatus["in-progress"])}</strong><span><i class="dot"></i>in progress</span></a>
+  </div>
+
+  <div class="two-col">
+    <section>
+      <h2>Being worked on now</h2>
+      {claims.length === 0 ? (
+        <p class="empty">No live claim right now. Starting on a device? <a href="/contribute/#claims">Claim it</a> so nobody duplicates your work.</p>
+      ) : (
+        <ul class="list-plain">
+          {claims.map(({ record: r, claim }) => (
+            <li>
+              <div class="dev-row">
+                <a class="name" href={deviceUrl(r.id)}>{displayName(r.vendor, r.model)}</a>
+                <StatusBadge status={effectiveStatus(r, on)} />
+                <span class="meta">{claim.who} — {claim.scope} · until {claim.expires}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h2>Recently updated</h2>
+      {latest.length === 0 ? <p class="empty">No curated record yet.</p> : (
+        <ul class="list-plain">
+          {latest.map((r) => (
+            <li>
+              <div class="dev-row">
+                <a class="name" href={deviceUrl(r.id)}>{displayName(r.vendor, r.model)}</a>
+                <StatusBadge status={effectiveStatus(r, on)} />
+                <span class="meta">{r.category} · updated {r.updated}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+
+    <section>
+      <h2>Latest news</h2>
+      {news.length === 0 ? <p class="empty">No news yet.</p> : (
+        <ul class="list-plain">{news.map((p) => <li><PostItem post={p} /></li>)}</ul>
+      )}
+      <p><a href="/news/">All news</a> · <a href="/rss.xml">RSS</a></p>
+
+      <div class="callout" style="margin-top:28px">
+        <h2 style="margin-top:0">For AI agents</h2>
+        <p>
+          Agents can query OpenDeviceDB themselves before starting a reverse-engineering job,
+          claim the device while they work, and publish their findings when done — through an MCP server.
+        </p>
+        <pre><code>claude mcp add opendevicedb -- npx -y @opendevicedb/mcp</code></pre>
+        <p><a class="btn" href="/agents/">Set up an agent →</a></p>
+      </div>
+    </section>
+  </div>
+</Base>

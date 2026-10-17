@@ -1,0 +1,45 @@
+---
+import Base from "../layouts/Base.astro";
+import { db } from "../lib/data.ts";
+const { snapshots, sources } = db();
+const curated = sources.get("curated")!;
+const list = [...snapshots].sort((a, b) => (sources.get(b.source)?.count ?? 0) - (sources.get(a.source)?.count ?? 0));
+const fmt = (n: number) => n.toLocaleString("en");
+---
+<Base title="Sources" description="The community databases OpenDeviceDB aggregates, with their licenses and snapshot dates.">
+  <div class="prose">
+    <h1>Sources</h1>
+    <p class="lede">
+      Most of what OpenDeviceDB knows comes from community projects that did the work first.
+      We aggregate them so one lookup covers every category — we don't compete with them.
+      Every imported record links back to its source; fixes to imported data belong upstream.
+    </p>
+  </div>
+
+  {list.length === 0 ? (
+    <p class="empty">No imported source yet. Importers live in <code>packages/importers</code>; run <code>npm run import -- all</code>.</p>
+  ) : (
+    <div class="grid" style="margin-top:20px">
+      {list.map((s) => (
+        <article class="card" id={s.source}>
+          <h2 style="margin:0 0 4px; font-size:1.2rem"><a href={s.url}>{s.name}</a></h2>
+          <p class="small muted mono" style="margin:0 0 8px">{s.url.replace(/^https?:\/\//, "")}</p>
+          <dl class="facts">
+            <dt>Records</dt><dd><a href={`/devices/?source=${encodeURIComponent(s.source)}`}>{fmt(sources.get(s.source)?.count ?? 0)}</a></dd>
+            <dt>License</dt><dd>{s.license}</dd>
+            <dt>Fetched</dt><dd><time datetime={s.fetched_at}>{s.fetched_at.slice(0, 10)}</time></dd>
+            <dt>Source id</dt><dd class="mono">{s.source}</dd>
+          </dl>
+        </article>
+      ))}
+    </div>
+  )}
+
+  <h2 id="curated">Curated records</h2>
+  <p class="prose">
+    <a href={`/devices/?source=curated`}>{fmt(curated.count)} records</a> are written directly in this repository
+    (<a href={curated.url}><code>data/devices/</code></a>), by people and their agents, under {curated.license}.
+    They override and enrich imported records for the same device.
+  </p>
+  <p class="small muted">Machine-readable: <a href="/api/sources.json">/api/sources.json</a>.</p>
+</Base>
