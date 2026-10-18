@@ -5,6 +5,8 @@
 [![Code: AGPL-3.0](https://img.shields.io/badge/code-AGPL--3.0-blue)](LICENSE)
 [![Data: CC BY-SA 4.0](https://img.shields.io/badge/data-CC%20BY--SA%204.0-green)](LICENSE-DATA.md)
 
+English | [简体中文](README.zh-CN.md)
+
 An open directory of devices whose protocols or firmware have been reverse engineered,
 so that nobody — human or AI agent — redoes work that already exists.
 
