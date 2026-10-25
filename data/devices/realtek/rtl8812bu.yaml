@@ -1,0 +1,125 @@
+id: realtek/rtl8812bu
+vendor: Realtek
+model: RTL8812BU / RTL8822BU USB Wi-Fi adapter
+aliases:
+- RTL8812BU
+- USB3.0 802.11ac 1200M Adapter
+- AC1200 USB Wi-Fi
+- ASUS - USB-AC58 rev A1
+- ASUS AC1300 USB-AC55 B1
+- ASUS U2
+- BUFFALO WI-U2-866DM
+- BUFFALO WI-U3-866DHP
+- D-Link DWA-T185 rev. A1
+- Dlink - DWA-181
+- Dlink - DWA-182 - D1
+- Dlink - DWA-183 D Ver
+- ELECOM WDB-867DU3S
+- Edimax EW-7822UAD
+- Edimax EW-7822ULC
+- Edimax EW-7822UTC
+- Hawking HW12ACU
+- Linksys WUSB3600 v2
+- Linksys WUSB6400M
+- Mercusys MA30H
+- Mercusys MA30N
+- Netgear A6150
+- TP-Link Archer T3U Plus v1
+- TP-Link Archer T3U v1
+- TP-Link Archer T4U V3
+- TRENDnet TEW-805UBH
+- TRENDnet TEW-808UBM
+category: peripheral
+identifiers:
+  usb:
+  - 0bda:b812
+  - 0bda:b82c
+  - 0bda:2102
+  - 7392:b822
+  - 7392:c822
+  - 7392:d822
+  - 7392:e822
+  - 7392:f822
+  - 0bda:b81a
+  - 0b05:1841
+  - 0b05:184c
+  - 0b05:19aa
+  - 0b05:1870
+  - 0b05:1874
+  - 2001:331e
+  - 2001:331c
+  - 2001:331f
+  - 13b1:0043
+  - 13b1:0045
+  - 2357:012d
+  - 2357:0138
+  - 2357:0115
+  - 2357:012e
+  - 2357:0116
+  - 2357:0117
+  - 0846:9055
+  - 0e66:0025
+  - 04ca:8602
+  - 20f4:808a
+  - 20f4:805a
+  - 056e:4011
+  - 2c4e:0107
+  - 2c4e:010a
+  - 2001:3322
+  - 0411:03d1
+  - 0411:03d0
+  chips:
+  - RTL8812BU
+  - RTL8822BU
+status: controllable
+vendor_support: active
+summary: Realtek's common 802.11ac dual-band USB Wi-Fi chip, found in many "AC1200 / 1200M" USB 3.0 dongles
+  (TP-Link Archer T3U/T4U, ASUS USB-AC55/AC58, D-Link DWA-181/182/183, Edimax, Netgear A6150, Mercusys
+  MA30H…). The RTL8822BU variant adds Bluetooth. Driven by the mainline Linux rtw88 driver since Linux
+  6.2 (6.12 or later recommended); the chip loads a Realtek firmware file shipped in linux-firmware.
+interfaces:
+- name: Wi-Fi (802.11ac) over USB
+  transport: usb
+  status: documented
+  confidence: high
+  notes: Linux driver rtw88_8822bu (mainline since 6.2); firmware rtw88/rtw8822b_fw.bin. Find your adapter's
+    id with lsusb.
+install:
+- project: Linux rtw88 driver
+  method: host-software
+  guide: https://github.com/morrownr/USB-WiFi/blob/main/home/USB_WiFi_Chipsets.md
+  difficulty: easy
+  tools:
+  - Linux 6.2 or later with linux-firmware
+  opens_device: false
+  mains_powered: false
+  brick_risk: none
+  reversible: 'yes'
+  notes: 'Plug it in: a recent kernel loads the driver by itself. Older kernels can use the out-of-tree
+    morrownr driver.'
+projects:
+- name: Linux rtw88 driver
+  url: https://github.com/torvalds/linux/blob/master/drivers/net/wireless/realtek/rtw88/rtw8822bu.c
+  kind: driver
+  license: GPL-2.0
+  freedom:
+    nonfree:
+    - device-firmware
+    cloud: none
+    notes: The driver is free; the chip runs Realtek firmware (rtw88/rtw8822b_fw.bin) loaded from linux-firmware.
+- name: morrownr 88x2bu (out-of-tree, old kernels)
+  url: https://github.com/morrownr/88x2bu-20210702
+  kind: driver
+  license: GPL-2.0
+- name: morrownr USB-WiFi guide
+  url: https://github.com/morrownr/USB-WiFi
+  kind: other
+provenance:
+  sources:
+  - curated
+  - https://github.com/opendevicedb/opendevicedb/issues/2
+  - https://github.com/torvalds/linux/blob/master/drivers/net/wireless/realtek/rtw88/rtw8822bu.c
+  ai_assisted: true
+  tools:
+  - claude-code
+updated: '2026-10-25'

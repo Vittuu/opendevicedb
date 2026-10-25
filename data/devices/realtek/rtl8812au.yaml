@@ -1,0 +1,94 @@
+id: realtek/rtl8812au
+vendor: Realtek
+model: RTL8812AU USB Wi-Fi adapter
+aliases:
+- RTL8812AU
+- USB3.0 802.11ac 1200M Adapter
+- AC1200 USB Wi-Fi
+category: peripheral
+identifiers:
+  usb:
+  - 0bda:8812
+  - 0bda:881a
+  - 0bda:881b
+  - 0bda:881c
+  - 0409:0408
+  - 0411:025d
+  - 04bb:0952
+  - 050d:1106
+  - 050d:1109
+  - 0586:3426
+  - 0789:016e
+  - 07b8:8812
+  - 0846:9051
+  - 0b05:17d2
+  - 0df6:0074
+  - 0e66:0022
+  - 1058:0632
+  - 13b1:003f
+  - 148f:9097
+  - 1740:0100
+  - 2001:330e
+  - 2001:3313
+  - 2001:3315
+  - 2001:3316
+  - 2019:ab30
+  - 20f4:805b
+  - 2357:0101
+  - 2357:0103
+  - 2357:010d
+  - 2357:010e
+  - 2357:010f
+  - 2357:0122
+  - 2604:0012
+  - 7392:a822
+  chips:
+  - RTL8812AU
+status: controllable
+vendor_support: active
+summary: Older Realtek 802.11ac dual-band USB Wi-Fi chip (AC1200), in many USB 3.0 dongles from TP-Link,
+  D-Link, ASUS, Netgear, Edimax, Belkin, TRENDnet and others. Driven by the mainline Linux rtw88 driver
+  since Linux 6.13 (automatic detection of all USB ids from 6.14); the chip loads a Realtek firmware file
+  shipped in linux-firmware.
+interfaces:
+- name: Wi-Fi (802.11ac) over USB
+  transport: usb
+  status: documented
+  confidence: high
+  notes: Linux driver rtw88_8812au (mainline since 6.13); firmware rtw88/rtw8812a_fw.bin. Find your adapter's
+    id with lsusb.
+install:
+- project: Linux rtw88 driver
+  method: host-software
+  guide: https://github.com/morrownr/USB-WiFi/blob/main/home/USB_WiFi_Chipsets.md
+  difficulty: easy
+  tools:
+  - Linux 6.13 or later with linux-firmware
+  opens_device: false
+  mains_powered: false
+  brick_risk: none
+  reversible: 'yes'
+  notes: 'Plug it in: a recent kernel loads the driver by itself. Older kernels can use the out-of-tree
+    morrownr driver.'
+projects:
+- name: Linux rtw88 driver
+  url: https://github.com/torvalds/linux/blob/master/drivers/net/wireless/realtek/rtw88/rtw8812au.c
+  kind: driver
+  license: GPL-2.0
+  freedom:
+    nonfree:
+    - device-firmware
+    cloud: none
+    notes: The driver is free; the chip runs Realtek firmware (rtw88/rtw8812a_fw.bin) loaded from linux-firmware.
+- name: morrownr USB-WiFi guide
+  url: https://github.com/morrownr/USB-WiFi
+  kind: other
+provenance:
+  sources:
+  - curated
+  - https://github.com/opendevicedb/opendevicedb/issues/2
+  - https://github.com/torvalds/linux/blob/master/drivers/net/wireless/realtek/rtw88/rtw8812au.c
+  ai_assisted: true
+  tools:
+  - claude-code
+updated: '2026-10-25'
