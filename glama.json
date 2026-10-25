@@ -1,0 +1,5 @@
+{
+  "$schema": "https://glama.ai/mcp/schemas/server.json",
+  "maintainers": ["smichea"],
+  "license": "AGPL-3.0-or-later"
+}
