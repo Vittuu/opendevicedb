@@ -33,6 +33,8 @@ the `opendevicedb` MCP server (tools `lookup_device`, `search_devices`, `claim_d
    plainly the `brick_risk`, whether it is `reversible` (and the `revert` guide), and whether
    it `opens_device`. Never guide step by step a route that opens a `mains_powered` device:
    give the official link and a mains-voltage warning. Nothing is flashed from OpenDeviceDB.
+   Each project's `freedom` says what stays proprietary (`nonfree`) and whether the vendor
+   `cloud` is still needed (none, setup-only, optional, required); absent means unknown.
 4. If you are going to work on it, call `claim_device` (who = the user, contact, a precise
    scope, days ≤ 90) and give the user the git / `gh pr create` command from the result so
    the claim becomes visible.

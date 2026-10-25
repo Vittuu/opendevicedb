@@ -17,7 +17,7 @@
 // (ptp2 flag PTP_CAP, canon CAP_SUP, every sierra camera) → controllable; file download only
 // → partial-protocol.
 import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
-import { clean, githubRaw, type Source } from "../lib.ts";
+import { clean, githubRaw, deviceFirmwareFreedom, type Source } from "../lib.ts";
 
 const REPO = "gphoto/libgphoto2", BRANCH = "master";
 const LICENSE = "LGPL-2.1-or-later";
@@ -226,7 +226,7 @@ export function fromEntry(camlib: Camlib, e: CamEntry, date = today()): DeviceRe
       status: e.capture ? "documented" : "partial",
       notes: e.capture ? "libgphoto2: file access, remote capture and configuration" : "libgphoto2: file listing and download only",
     }],
-    projects: [{ name: lib.project, url: `https://github.com/${REPO}/blob/${BRANCH}/${lib.path}`, kind: "driver", license: LICENSE }],
+    projects: [{ name: lib.project, url: `https://github.com/${REPO}/blob/${BRANCH}/${lib.path}`, kind: "driver", license: LICENSE, freedom: deviceFirmwareFreedom() }],
     install: [gphotoInstall(transport === "usb")],
     provenance: { sources: ["libgphoto2"] },
     updated: date,

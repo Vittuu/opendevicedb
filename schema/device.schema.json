@@ -63,7 +63,22 @@
           "url": { "type": "string", "format": "uri" },
           "kind": { "enum": ["firmware", "sdk", "library", "driver", "protocol-doc", "integration", "tool", "teardown", "other"] },
           "license": { "type": "string" },
-          "official": { "type": "boolean", "default": false }
+          "official": { "type": "boolean", "default": false },
+          "freedom": {
+            "type": "object",
+            "description": "What stays proprietary or cloud-bound once this project is in use. Absent means unknown.",
+            "additionalProperties": false,
+            "properties": {
+              "nonfree": {
+                "type": "array",
+                "description": "components that still need proprietary code; [] means nothing non-free is known to remain",
+                "uniqueItems": true,
+                "items": { "enum": ["vendor-blobs", "device-firmware", "modem", "gpu", "wifi", "bluetooth", "camera", "sensors", "bootloader", "other"] }
+              },
+              "cloud": { "enum": ["none", "setup-only", "optional", "required", "unknown"] },
+              "notes": { "type": "string" }
+            }
+          }
         }
       }
     },

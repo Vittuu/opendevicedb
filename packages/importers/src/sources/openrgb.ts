@@ -10,7 +10,7 @@
 // Skipped: detectors with no fixed device (network lights, E1.31, generic SMBus families, QMK
 // and Logitech HID++ dynamic detectors). Sources are GPL-2.0-or-later (a few files GPL-2.0-only).
 import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
-import { clean, githubFiles, githubRaw, mapLimit, type Source } from "../lib.ts";
+import { clean, githubFiles, githubRaw, mapLimit, deviceFirmwareFreedom, type Source } from "../lib.ts";
 
 const MIRROR = "CalcProgrammer1/OpenRGB", BRANCH = "master";
 const GITLAB = "https://gitlab.com/CalcProgrammer1/OpenRGB/-/tree/master";
@@ -197,7 +197,7 @@ export function fromEntry(e: Entry, vendors: string[], categories: Map<string, s
       status: "documented",
       notes: e.bus === "usb" ? "Lighting control only, USB HID (OpenRGB)" : "Lighting control only, SMBus/I2C (OpenRGB)",
     }],
-    projects: [{ name: "OpenRGB", url: `${GITLAB}/${e.dir.split("/").map(encodeURIComponent).join("/")}`, kind: "driver", license: "GPL-2.0-or-later" }],
+    projects: [{ name: "OpenRGB", url: `${GITLAB}/${e.dir.split("/").map(encodeURIComponent).join("/")}`, kind: "driver", license: "GPL-2.0-or-later", freedom: deviceFirmwareFreedom() }],
     install: [openrgbInstall(e.bus)],
     provenance: { sources: ["openrgb"] },
     updated: date,

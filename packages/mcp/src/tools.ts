@@ -21,6 +21,7 @@ const IFACE = P.interfaces.items.properties;
 const PROJ = P.projects.items.properties;
 const VERIF = P.verification.items.properties;
 const INSTALL = P.install.items.properties;
+const FREEDOM = PROJ.freedom.properties;
 const FIELD_ORDER = Object.keys(P);
 
 const ID_RE = new RegExp(P.id.pattern);
@@ -187,10 +188,12 @@ export async function searchDevices(ctx: Context, a: { query: string; category?:
       id: h.id, vendor: h.vendor, model: h.model, aliases: h.aliases, category: h.category, status: h.status,
       sources: h.sources, live_claims: h.claims, verified: h.verified, score: h.score,
       ...(h.install ? { install: h.install } : {}),
+      ...(h.cloud ? { cloud: h.cloud } : {}),
     })),
     ...(requests.length ? { requests } : {}),
     hint: hits.length
-      ? "Call lookup_device with the id for the full record, live claims and a recommendation. `install` (when present) is the difficulty of the easiest install route; lookup_device lists the routes."
+      ? "Call lookup_device with the id for the full record, live claims and a recommendation. `install` (when present) is the difficulty of the easiest install route; lookup_device lists the routes. " +
+        "`cloud` (when present) is the least vendor-cloud dependency across the device's projects (none, setup-only, optional, required); lookup_device gives each project's `freedom`."
       : "No match. Try lookup_device with an identifier (FCC id, USB vid:pid, BLE name, Zigbee model). If nothing is known, call claim_device before you start reverse engineering" +
         (requests.length ? "; `requests` lists devices people asked for but nobody has published yet." : ", or request_device if your user only wants it to exist."),
   };
@@ -381,6 +384,11 @@ export const patchSchema = z.strictObject({
     kind: en(PROJ.kind.enum),
     license: z.string().optional(),
     official: z.boolean().optional(),
+    freedom: z.strictObject({
+      nonfree: z.array(en(FREEDOM.nonfree.items.enum)).optional().describe("Parts that still need proprietary code once the project is in use; [] = nothing non-free known to remain."),
+      cloud: en(FREEDOM.cloud.enum).optional().describe("none = works fully locally; setup-only = a vendor account once (e.g. to get a local key); optional; required; unknown."),
+      notes: z.string().optional(),
+    }).optional().describe("What stays non-free or cloud-bound, from the project's own documentation; leave out when unknown."),
   })).optional().describe("Your code or docs (open license, hosted elsewhere); merged by url."),
   install: z.array(z.strictObject({
     project: z.string().describe("Name of the project (in `projects`) this route installs."),
@@ -435,7 +443,7 @@ export async function publishFindings(ctx: Context, a: { id: string; patch: Patc
   const hits = policyScan([
     ["summary", patch.summary],
     ...(patch.interfaces ?? []).flatMap((i: any, n: number) => [[`interfaces[${n}].name`, i?.name], [`interfaces[${n}].notes`, i?.notes]] as [string, string][]),
-    ...(patch.projects ?? []).map((p: any, n: number) => [`projects[${n}].name`, p?.name] as [string, string]),
+    ...(patch.projects ?? []).flatMap((p: any, n: number) => [[`projects[${n}].name`, p?.name], [`projects[${n}].freedom.notes`, p?.freedom?.notes]] as [string, string][]),
     ...(patch.install ?? []).flatMap((i: any, n: number) => [[`install[${n}].notes`, i?.notes], [`install[${n}].firmware_constraints`, i?.firmware_constraints]] as [string, string][]),
     ...(patch.verification ?? []).map((v: any, n: number) => [`verification[${n}].notes`, v?.notes] as [string, string]),
   ]);

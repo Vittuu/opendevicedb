@@ -2,7 +2,7 @@
 // (the same definitions the zigbee2mqtt.io docgen renders). Only plain data is kept:
 // vendor, model, zigbeeModel/fingerprint model IDs, and expose types for the category.
 import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
-import { clean, firstMatch, githubFiles, type Source } from "../lib.ts";
+import { clean, firstMatch, githubFiles, deviceFirmwareFreedom, type Source } from "../lib.ts";
 
 /** The subset of a prepared converter definition this importer reads. */
 export interface Z2mDefinition {
@@ -81,7 +81,7 @@ export function fromDefinitions(defs: Z2mDefinition[], date = today(), pages?: S
     // some model IDs are NUL-padded as the device reports them
     identifiers: { zigbee_model: [...new Set(zigbee.map((z) => clean(z.replace(/\0/g, ""))).filter(Boolean))] },
     status: "controllable",
-    projects: [{ name: "Zigbee2MQTT", url: z2mPage(page), kind: "integration", license: "GPL-3.0" }],
+    projects: [{ name: "Zigbee2MQTT", url: z2mPage(page), kind: "integration", license: "GPL-3.0", freedom: deviceFirmwareFreedom() }],
     install: [z2mInstall(page, pages)],
     provenance: { sources: ["zigbee2mqtt"] },
     updated: date,

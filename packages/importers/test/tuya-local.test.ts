@@ -99,6 +99,7 @@ test("tuya-local configs → records", () => {
   assert.equal(d.status, "controllable");
   assert.deepEqual(d.identifiers, { sku: ["tuya:ifasqsxbghku3bwk"] });
   assert.equal(d.projects![0].url, "https://github.com/make-all/tuya-local/blob/main/custom_components/tuya_local/devices/aktobis_wdh_310ek_dehumidifier.yaml");
+  assert.deepEqual(d.projects![0].freedom, { nonfree: ["device-firmware"], cloud: "setup-only", notes: "The local key is usually obtained once through a Tuya account" });
   assert.deepEqual(d.provenance, { sources: ["tuya-local"] });
   assert.equal(t.category, "other", "thermostats are not appliances");
   assert.deepEqual(t.identifiers!.sku, ["TGM50", "tuya:daltzmaeoxybutqs"]);

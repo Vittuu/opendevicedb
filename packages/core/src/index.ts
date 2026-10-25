@@ -91,6 +91,15 @@ function mergeIdentifiers(a: DeviceRecord["identifiers"] = {}, b: DeviceRecord["
   return out;
 }
 
+/** Projects unioned by url, `a` first; a project that says nothing about freedom takes it from its duplicate. */
+function mergeProjects(a: DeviceRecord["projects"] = [], b: DeviceRecord["projects"] = []) {
+  return uniqBy([...a, ...b], (p) => p.url).map((p) => {
+    if (p.freedom) return p;
+    const freedom = [...a, ...b].find((q) => q.url === p.url && q.freedom)?.freedom;
+    return freedom ? { ...p, freedom } : p;
+  });
+}
+
 /** Merge b into a. `a` wins on scalar fields; lists are unioned; status takes the furthest. */
 export function mergeRecords(a: DeviceRecord, b: DeviceRecord): DeviceRecord {
   return {
@@ -101,7 +110,7 @@ export function mergeRecords(a: DeviceRecord, b: DeviceRecord): DeviceRecord {
     status: statusRank(a.status) >= statusRank(b.status) ? a.status : b.status,
     summary: a.summary ?? b.summary,
     interfaces: uniqBy([...(a.interfaces ?? []), ...(b.interfaces ?? [])], (i) => `${i.transport}:${i.name}`),
-    projects: uniqBy([...(a.projects ?? []), ...(b.projects ?? [])], (p) => p.url),
+    projects: mergeProjects(a.projects, b.projects),
     install: uniqBy([...(a.install ?? []), ...(b.install ?? [])], (i) => `${i.method}:${i.guide}`),
     claims: uniqBy([...(a.claims ?? []), ...(b.claims ?? [])], (c) => `${c.who}:${c.since}:${c.scope}`),
     verification: [...(a.verification ?? []), ...(b.verification ?? [])],

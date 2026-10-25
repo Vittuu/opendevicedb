@@ -4,7 +4,7 @@ import Base from "../../../layouts/Base.astro";
 import StatusBadge from "../../../components/StatusBadge.astro";
 import GetStarted from "../../../components/GetStarted.astro";
 import { db, effectiveStatus, liveClaims, editUrl, jsonUrl } from "../../../lib/data.ts";
-import { STATUS_HELP, displayName } from "../../../lib/config.ts";
+import { STATUS_HELP, NONFREE_LABEL, NONFREE_HELP, CLOUD_LABEL, CLOUD_HELP, displayName } from "../../../lib/config.ts";
 import { wantedById } from "../../../lib/wanted.ts";
 import { reportsFor } from "../../../lib/reports.ts";
 import { statusRank, wantedIssueUrl } from "@opendevicedb/core";
@@ -49,6 +49,8 @@ const titleTail: Record<string, string> = {
 };
 const pageTitle = `${displayName(r.vendor, r.model)}: ${titleTail[status] ?? status}`;
 const supportedBy = [...new Set((r.projects ?? []).map((p) => p.name.split(" (")[0]))].slice(0, 3);
+// SPEC "Freedom": only shown when at least one project says what stays closed.
+const freedomKnown = (r.projects ?? []).some((p) => p.freedom);
 const desc = r.summary ?? `${displayName(r.vendor, r.model)} (${r.category}): ${STATUS_HELP[status]}` +
   (supportedBy.length ? ` Open projects: ${supportedBy.join(", ")}.` : "");
 ---
@@ -141,7 +143,7 @@ const desc = r.summary ?? `${displayName(r.vendor, r.model)} (${r.category}): ${
   <h2 id="projects">Projects</h2>
   {(r.projects ?? []).length === 0 ? <p class="section-empty">No known project yet.</p> : (
     <div class="table-wrap"><table class="stackable">
-      <thead><tr><th>Project</th><th>Kind</th><th>Origin</th><th>License</th></tr></thead>
+      <thead><tr><th>Project</th><th>Kind</th><th>Origin</th><th>License</th>{freedomKnown && <th>Freedom</th>}</tr></thead>
       <tbody>
         {r.projects!.map((p) => (
           <tr>
@@ -149,10 +151,29 @@ const desc = r.summary ?? `${displayName(r.vendor, r.model)} (${r.category}): ${
             <td data-label="Kind">{p.kind}</td>
             <td data-label="Origin">{p.official ? "official (vendor)" : "community"}</td>
             <td data-label="License">{p.license ?? <span class="muted">not stated</span>}</td>
+            {freedomKnown && <td data-label="Freedom">{p.freedom ? (
+              <span class="freedom">
+                <span title={(p.freedom.nonfree ?? []).map((n) => `${NONFREE_LABEL[n] ?? n}: ${NONFREE_HELP[n] ?? ""}`).join("\n") || undefined}>
+                  Still non-free: {p.freedom.nonfree ? (p.freedom.nonfree.length ? p.freedom.nonfree.map((n) => NONFREE_LABEL[n] ?? n).join(", ") : "nothing known") : <span class="muted">not stated</span>}
+                </span>
+                {p.freedom.cloud && <> · <span title={CLOUD_HELP[p.freedom.cloud]}>Cloud: <span class:list={["badge", `cloud-${p.freedom.cloud}`]}>{CLOUD_LABEL[p.freedom.cloud] ?? p.freedom.cloud}</span></span></>}
+                {p.freedom.notes && <span class="small muted" style="display:block">{p.freedom.notes}</span>}
+              </span>
+            ) : <span class="muted">not stated</span>}</td>}
           </tr>
         ))}
       </tbody>
     </table></div>
+  )}
+  {freedomKnown && (
+    <details class="small legend">
+      <summary class="muted">What "still non-free" and "cloud" mean</summary>
+      <p>What stays proprietary or depends on the vendor's cloud once the project is in use, from the project's own documentation.</p>
+      <dl class="facts">
+        {Object.entries(NONFREE_HELP).map(([k, v]) => <><dt>{NONFREE_LABEL[k]}</dt><dd>{v}</dd></>)}
+        {Object.entries(CLOUD_HELP).map(([k, v]) => <><dt>Cloud: {CLOUD_LABEL[k]}</dt><dd>{v}</dd></>)}
+      </dl>
+    </details>
   )}
 
   <h2 id="verification">Verification</h2>

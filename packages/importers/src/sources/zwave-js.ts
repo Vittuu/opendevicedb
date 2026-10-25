@@ -6,7 +6,7 @@
 // identifiers.sku as "zwave:<manufacturerId>:<productType>:<productId>" so they are searchable.
 // Z-Wave is a published standard; Z-Wave JS is the open driver that controls these devices.
 import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
-import { clean, firstMatch, githubFiles, githubRaw, mapLimit, type Source } from "../lib.ts";
+import { clean, firstMatch, githubFiles, githubRaw, mapLimit, deviceFirmwareFreedom, type Source } from "../lib.ts";
 
 const REPO = "zwave-js/zwave-js", BRANCH = "master";
 const DIR = "packages/config/config/devices";
@@ -211,7 +211,7 @@ export function fromDeviceFile(path: string, json: any, date = today()): DeviceR
       status: "controllable",
       summary: description ? `${description} (Z-Wave).` : undefined,
       interfaces: [{ name: "Z-Wave", transport: "zwave", status: "documented", spec: url }],
-      projects: [{ name: "Z-Wave JS device config", url, kind: "driver", license: "MIT" }],
+      projects: [{ name: "Z-Wave JS device config", url, kind: "driver", license: "MIT", freedom: deviceFirmwareFreedom() }],
       install: [zwaveInstall(first ? zwaveDbPage(mid, first.pt, first.pid, fw) : QUICK_START)],
       provenance: { sources: ["zwave-js"] },
       updated: date,

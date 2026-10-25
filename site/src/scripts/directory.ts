@@ -13,6 +13,7 @@ const catEl = form.querySelector<HTMLSelectElement>("#category")!;
 const stEl = form.querySelector<HTMLSelectElement>("#status")!;
 const srcEl = form.querySelector<HTMLSelectElement>("#source")!;
 const instEl = form.querySelector<HTMLSelectElement>("#install")!;
+const cloudEl = form.querySelector<HTMLSelectElement>("#cloud")!;
 const list = root.querySelector<HTMLElement>("#results")!;
 const count = root.querySelector<HTMLElement>("#count")!;
 const pager = root.querySelector<HTMLElement>("#pager")!;
@@ -88,6 +89,7 @@ function syncUrl() {
   if (stEl.value) p.set("status", stEl.value);
   if (srcEl.value) p.set("source", srcEl.value);
   if (instEl.value) p.set("install", instEl.value);
+  if (cloudEl.value) p.set("cloud", cloudEl.value);
   if (page > 1) p.set("page", String(page));
   const qs = p.toString();
   history.replaceState(null, "", qs ? `?${qs}` : location.pathname);
@@ -95,9 +97,11 @@ function syncUrl() {
 
 function render() {
   if (!index) return;
-  const inst = instEl.value;
-  const pool = srcEl.value || inst
-    ? index.filter((e) => (!srcEl.value || e.sources.includes(srcEl.value)) && (!inst || (inst === "any" ? !!e.install : e.install === inst)))
+  const inst = instEl.value, cloud = cloudEl.value;
+  // "setup-only" also keeps devices that need no cloud at all (IndexEntry.cloud is the best project's).
+  const cloudOk = (e: IndexEntry) => !cloud || e.cloud === "none" || (cloud === "setup-only" && e.cloud === "setup-only");
+  const pool = srcEl.value || inst || cloud
+    ? index.filter((e) => (!srcEl.value || e.sources.includes(srcEl.value)) && (!inst || (inst === "any" ? !!e.install : e.install === inst)) && cloudOk(e))
     : index;
   const hits = search(pool, qEl.value, {
     category: catEl.value || undefined,
@@ -134,7 +138,7 @@ function update(resetPage = true) {
 
 form.addEventListener("submit", (ev) => { ev.preventDefault(); update(); });
 qEl.addEventListener("input", () => update());
-for (const el of [catEl, stEl, srcEl, instEl]) el.addEventListener("change", () => update());
+for (const el of [catEl, stEl, srcEl, instEl, cloudEl]) el.addEventListener("change", () => update());
 qEl.addEventListener("focus", () => { load().catch(() => {}); }, { once: true });
 pager.addEventListener("click", (ev) => {
   const b = (ev.target as HTMLElement).closest<HTMLButtonElement>("button[data-go]");
@@ -147,6 +151,6 @@ pager.addEventListener("click", (ev) => {
 // Restore state from the URL (links from the home page, category links on device pages).
 const params = new URLSearchParams(location.search);
 const setIf = (el: HTMLInputElement | HTMLSelectElement, k: string) => { const v = params.get(k); if (v !== null) el.value = v; };
-setIf(qEl, "q"); setIf(catEl, "category"); setIf(stEl, "status"); setIf(srcEl, "source"); setIf(instEl, "install");
+setIf(qEl, "q"); setIf(catEl, "category"); setIf(stEl, "status"); setIf(srcEl, "source"); setIf(instEl, "install"); setIf(cloudEl, "cloud");
 page = Math.max(1, Number(params.get("page")) || 1);
 if ([...params.keys()].length) update(false);

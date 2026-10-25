@@ -6,7 +6,13 @@ export type Status = "unknown" | "in-progress" | "partial-protocol" | "controlla
 export const STATUSES: Status[] = ["unknown", "in-progress", "partial-protocol", "controllable", "open-firmware"];
 
 export interface Claim { who: string; contact: string; scope: string; since: string; expires: string; agent?: string }
-export interface Project { name: string; url: string; kind: string; license?: string; official?: boolean }
+export type NonFree =
+  | "vendor-blobs" | "device-firmware" | "modem" | "gpu" | "wifi"
+  | "bluetooth" | "camera" | "sensors" | "bootloader" | "other";
+export type Cloud = "none" | "setup-only" | "optional" | "required" | "unknown";
+/** What stays proprietary or cloud-bound once a project is in use (SPEC "Freedom"). */
+export interface Freedom { nonfree?: NonFree[]; cloud?: Cloud; notes?: string }
+export interface Project { name: string; url: string; kind: string; license?: string; official?: boolean; freedom?: Freedom }
 export interface Interface { name: string; transport: string; status: string; confidence?: string; spec?: string; notes?: string }
 export interface Verification { method: string; by: string; date: string; firmware?: string; notes?: string }
 export type InstallMethod =
@@ -108,6 +114,8 @@ export interface IndexEntry {
   verified: boolean;
   /** Difficulty of the easiest install route, when the record has any (SPEC R1). */
   install?: InstallRoute["difficulty"];
+  /** Least cloud dependency across projects, when any project says (SPEC "Freedom"). */
+  cloud?: Exclude<Cloud, "unknown">;
   updated: string;
 }
 
@@ -116,6 +124,13 @@ const DIFFICULTY = ["easy", "medium", "hard"] as const;
 export function easiestInstall(r: Pick<DeviceRecord, "install">): InstallRoute["difficulty"] | undefined {
   const d = (r.install ?? []).map((i) => DIFFICULTY.indexOf(i.difficulty)).filter((n) => n >= 0);
   return d.length ? DIFFICULTY[Math.min(...d)] : undefined;
+}
+
+const CLOUD = ["none", "setup-only", "optional", "required"] as const;
+/** Least cloud dependency across projects ("unknown" and absent ignored), or undefined. */
+export function bestCloud(r: Pick<DeviceRecord, "projects">): IndexEntry["cloud"] {
+  const c = (r.projects ?? []).map((p) => CLOUD.indexOf(p.freedom?.cloud as any)).filter((n) => n >= 0);
+  return c.length ? CLOUD[Math.min(...c)] : undefined;
 }
 
 export function toIndexEntry(r: DeviceRecord, on = today()): IndexEntry {
@@ -131,6 +146,7 @@ export function toIndexEntry(r: DeviceRecord, on = today()): IndexEntry {
     claims: liveClaims(r, on).length,
     verified: (r.verification ?? []).some((v) => v.method === "hardware-replay"),
     ...(easiestInstall(r) ? { install: easiestInstall(r) } : {}),
+    ...(bestCloud(r) ? { cloud: bestCloud(r) } : {}),
     updated: r.updated,
   };
 }

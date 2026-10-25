@@ -1,7 +1,7 @@
 // ESPHome Devices (devices.esphome.io), one src/docs/devices/<name>/index.md per device
 // in github.com/esphome/esphome-devices, with YAML frontmatter (title, type, board…).
 import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
-import { clean, frontmatter, githubFiles, githubRaw, mapLimit, splitTitle, type Source } from "../lib.ts";
+import { clean, frontmatter, githubFiles, githubRaw, espWifiFreedom, mapLimit, splitTitle, type Source } from "../lib.ts";
 
 const REPO = "esphome/esphome-devices", BRANCH = "main";
 const DEVICE_FILE = /^src\/docs\/devices\/([^/]+)\/index\.mdx?$/;
@@ -125,6 +125,9 @@ export function esphomeInstall(fm: Record<string, any>, guide: string, chips: st
   }];
 }
 
+/** SPEC "Freedom": the closed Wi-Fi blob is only known for Espressif chips (not BK72xx, RTL87xx, RP2040…). */
+const isEsp = (chips: string[]) => chips.length > 0 && chips.every((c) => /^ESP/.test(c));
+
 export function fromDevice(path: string, text: string, date = today()): DeviceRecord | null {
   const dir = path.match(DEVICE_FILE)?.[1];
   const fm = frontmatter(text);
@@ -141,7 +144,7 @@ export function fromDevice(path: string, text: string, date = today()): DeviceRe
     category: esphomeCategory(fm.type),
     identifiers: { chips },
     status: "open-firmware",
-    projects: [{ name: "ESPHome", url, kind: "firmware" }],
+    projects: [{ name: "ESPHome", url, kind: "firmware", ...(isEsp(chips) ? { freedom: espWifiFreedom() } : {}) }],
     install: esphomeInstall(fm, url, chips, clean(fm.title), text),
     provenance: { sources: ["esphome"] },
     updated: date,

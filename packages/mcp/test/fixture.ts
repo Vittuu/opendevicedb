@@ -35,7 +35,7 @@ export const ARCHER: DeviceRecord = {
   model: "Archer C7 v5",
   category: "router",
   status: "open-firmware",
-  projects: [{ name: "OpenWrt", url: "https://openwrt.org/toh/tp-link/archer_c7", kind: "firmware", license: "GPL-2.0" }],
+  projects: [{ name: "OpenWrt", url: "https://openwrt.org/toh/tp-link/archer_c7", kind: "firmware", license: "GPL-2.0", freedom: { nonfree: ["wifi"], cloud: "none" } }],
   install: [{ project: "OpenWrt", method: "vendor-upload", guide: "https://openwrt.org/toh/tp-link/archer_c7", difficulty: "easy", brick_risk: "low", reversible: "yes" }],
   provenance: { sources: ["openwrt"] },
   updated: "2026-10-01",

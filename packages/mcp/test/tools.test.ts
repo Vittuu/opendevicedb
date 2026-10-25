@@ -68,6 +68,23 @@ test("lookup returns install routes and points the agent to them; search gives t
   assert.equal("install" in (await searchDevices(ctx, { query: "tello" }) as any).results[0], false);
 }));
 
+test("lookup returns project freedom; search gives the least cloud dependency", withRepo(async (ctx) => {
+  const r: any = await lookupDevice(ctx, { id: ARCHER.id });
+  assert.deepEqual(r.record.projects[0].freedom, { nonfree: ["wifi"], cloud: "none" });
+  assert.equal((await searchDevices(ctx, { query: "archer" }) as any).results[0].cloud, "none");
+  assert.equal("cloud" in (await searchDevices(ctx, { query: "tello" }) as any).results[0], false);
+}));
+
+test("publish accepts project freedom and keeps it when a later patch omits it", withRepo(async (ctx, root) => {
+  const p = { name: "skylib", url: "https://example.org/skylib", kind: "library" as const };
+  const r1: any = await publishFindings(ctx, { id: SKY.id, patch: { projects: [{ ...p, freedom: { nonfree: ["device-firmware" as const], cloud: "setup-only" as const } }] } });
+  assert.equal(r1.ok, true, JSON.stringify(r1));
+  await publishFindings(ctx, { id: SKY.id, patch: { projects: [{ ...p, license: "MIT" }] } });
+  const rec = parseRecordYaml(read(root, SKY.id));
+  assert.deepEqual(rec.projects!.find((x) => x.url === p.url)!.freedom, { nonfree: ["device-firmware"], cloud: "setup-only" });
+  assert.equal((await searchDevices(ctx, { query: "sky" }) as any).results[0].cloud, "setup-only");
+}));
+
 // ---------- claim_device ----------
 
 test("claim creates a schema-valid stub for an unknown device", withRepo(async (ctx, root) => {
@@ -251,6 +268,7 @@ test("remote backend reads the static API through a cached fake fetch", async ()
     "https://odb.test/api/devices/tp-link/archer-c7-v5.json": ARCHER,
   };
   docs["https://odb.test/api/index.json"][2].install = "easy";
+  docs["https://odb.test/api/index.json"][2].cloud = "none";
   const calls: string[] = [];
   let now = 0;
   const fakeFetch: FetchLike = async (url) => {
@@ -271,8 +289,10 @@ test("remote backend reads the static API through a cached fake fetch", async ()
   const archer: any = (await searchDevices(ctx, { query: "archer" }) as any).results[0];
   assert.equal(archer.id, "tp-link/archer-c7-v5");
   assert.equal(archer.install, "easy");
+  assert.equal(archer.cloud, "none");
   const full: any = await lookupDevice(ctx, { id: ARCHER.id });
   assert.deepEqual(full.record.install, ARCHER.install);
+  assert.deepEqual(full.record.projects, ARCHER.projects);
   assert.match(full.recommendation, /listed under `install`/);
   assert.equal(calls.filter((u) => u.endsWith("index.json")).length, 1, "index cached");
 

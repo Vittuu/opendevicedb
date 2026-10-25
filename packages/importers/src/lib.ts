@@ -1,7 +1,7 @@
 // Shared helpers for importers: HTTP with retries, GitHub listing, frontmatter,
 // name splitting and snapshot finalisation (validate, dedupe, compact, sort).
 import YAML from "yaml";
-import { validate, mergeRecords, type DeviceRecord, type Snapshot } from "@opendevicedb/core";
+import { validate, mergeRecords, type DeviceRecord, type Freedom, type Snapshot } from "@opendevicedb/core";
 
 export interface Source {
   source: string;   // short id, also the snapshot file name
@@ -111,6 +111,17 @@ export function firstMatch<T>(table: [RegExp, T][], text: string, fallback: T): 
   for (const [re, v] of table) if (re.test(text)) return v;
   return fallback;
 }
+
+// ---------- freedom (SPEC "Freedom") ----------
+// Only what holds for every device of a source; curated records refine per device.
+
+/** The stock firmware stays and the project talks to it locally (Zigbee, Z-Wave, USB, radio). */
+export const deviceFirmwareFreedom = (notes?: string): Freedom =>
+  ({ nonfree: ["device-firmware"], cloud: "none", ...(notes ? { notes } : {}) });
+
+/** ESPHome and Tasmota on Espressif chips: open firmware, closed Wi-Fi stack. */
+export const espWifiFreedom = (): Freedom =>
+  ({ nonfree: ["wifi"], cloud: "none", notes: "The ESP Wi-Fi stack ships as a binary blob from Espressif" });
 
 // ---------- records ----------
 

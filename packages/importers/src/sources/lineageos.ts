@@ -14,7 +14,7 @@
 //
 // The vendor and model normalisation below is exported and shared with the postmarketOS
 // importer so that the same phone gets the same id in both sources.
-import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
+import { makeId, today, type DeviceRecord, type Freedom, type InstallRoute } from "@opendevicedb/core";
 import { clean, firstMatch, githubFiles, githubRaw, mapLimit, type Source } from "../lib.ts";
 import YAML from "yaml";
 
@@ -181,6 +181,12 @@ function lineageRoute(d: Record<string, any>): InstallRoute {
   }
 }
 
+// SPEC "Freedom": every LineageOS build ships proprietary files from the stock firmware.
+const lineageFreedom = (): Freedom => ({
+  nonfree: ["vendor-blobs"], cloud: "none",
+  notes: "LineageOS uses proprietary files extracted from the stock firmware (modem, camera, GPU…)",
+});
+
 /** One device YAML (parsed) → record, or null when vendor/name/codename is missing. */
 export function fromDevice(d: Record<string, any> | null, date = today()): DeviceRecord | null {
   if (!d || typeof d !== "object") return null;
@@ -199,7 +205,7 @@ export function fromDevice(d: Record<string, any> | null, date = today()): Devic
     category: lineageCategory(d.type),
     identifiers: { sku: models, chips: [clean(d.soc)] },
     status: "open-firmware",
-    projects: [{ name: `${label} (${codename}${d.variant != null ? ` variant ${clean(d.variant)}` : ""})`, url: lineageUrl(codename, d.variant), kind: "firmware", license: "Apache-2.0" }],
+    projects: [{ name: `${label} (${codename}${d.variant != null ? ` variant ${clean(d.variant)}` : ""})`, url: lineageUrl(codename, d.variant), kind: "firmware", license: "Apache-2.0", freedom: lineageFreedom() }],
     install: [lineageInstall(d)],
     provenance: { sources: ["lineageos"] },
     updated: date,

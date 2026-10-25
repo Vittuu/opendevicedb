@@ -20,6 +20,37 @@ export const STATUS_HELP: Record<string, string> = {
   "open-firmware": "A free replacement firmware exists.",
 };
 
+// SPEC "Freedom": what stays proprietary or cloud-bound once a project is in use.
+export const NONFREE_LABEL: Record<string, string> = {
+  "vendor-blobs": "vendor blobs", "device-firmware": "stock firmware", modem: "modem", gpu: "GPU", wifi: "Wi-Fi",
+  bluetooth: "Bluetooth", camera: "camera", sensors: "sensors", bootloader: "bootloader", other: "other",
+};
+
+export const NONFREE_HELP: Record<string, string> = {
+  "vendor-blobs": "proprietary files extracted from the stock firmware",
+  "device-firmware": "the stock firmware stays on the device; the project only talks to it",
+  modem: "cellular modem firmware",
+  gpu: "graphics driver or firmware",
+  wifi: "Wi-Fi driver or firmware",
+  bluetooth: "Bluetooth firmware",
+  camera: "camera driver or image processing",
+  sensors: "sensor hub or sensor drivers",
+  bootloader: "boot firmware",
+  other: "another proprietary part",
+};
+
+export const CLOUD_LABEL: Record<string, string> = {
+  none: "none", "setup-only": "only at setup", optional: "optional", required: "required", unknown: "unknown",
+};
+
+export const CLOUD_HELP: Record<string, string> = {
+  none: "works fully locally",
+  "setup-only": "a vendor account is needed once, e.g. to obtain a local key",
+  optional: "cloud features exist but are not needed",
+  required: "does not work without the vendor's cloud",
+  unknown: "not known",
+};
+
 /** "Pebble" + "Pebble Time" → "Pebble Time"; "Ryze Tech" + "Tello" → "Ryze Tech Tello". */
 export function displayName(vendor: string, model: string): string {
   return model.toLowerCase().startsWith(vendor.toLowerCase()) ? model : `${vendor} ${model}`;

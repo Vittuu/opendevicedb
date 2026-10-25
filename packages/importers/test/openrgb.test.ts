@@ -57,7 +57,7 @@ test("openrgb sources → records", () => {
   assert.deepEqual(razer.identifiers, { usb: ["1532:008f", "1532:0090"] });
   assert.equal(razer.category, "peripheral");
   assert.equal(razer.status, "controllable");
-  assert.deepEqual(razer.projects, [{ name: "OpenRGB", url: "https://gitlab.com/CalcProgrammer1/OpenRGB/-/tree/master/Controllers/RazerController", kind: "driver", license: "GPL-2.0-or-later" }]);
+  assert.deepEqual(razer.projects, [{ name: "OpenRGB", url: "https://gitlab.com/CalcProgrammer1/OpenRGB/-/tree/master/Controllers/RazerController", kind: "driver", license: "GPL-2.0-or-later", freedom: { nonfree: ["device-firmware"], cloud: "none" } }]);
   assert.equal(f.records[0].identifiers, undefined, "SMBus GPUs have no USB id");
   assert.equal(f.records[0].interfaces![0].transport, "other");
 });

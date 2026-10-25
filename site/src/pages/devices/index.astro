@@ -13,6 +13,8 @@ const statusCounts = new Map(facet("status"));
 const names = Object.fromEntries([...sources].map(([id, s]) => [id, s.name]));
 const installable = index.filter((e) => e.install).length;
 const easy = index.filter((e) => e.install === "easy").length;
+const noCloud = index.filter((e) => e.cloud === "none").length;
+const setupOnly = index.filter((e) => e.cloud === "none" || e.cloud === "setup-only").length;
 ---
 <Base title="Devices" description="Search every device known to OpenDeviceDB by name, alias, FCC ID, USB vid:pid, BLE name or chip.">
   <h1>Devices</h1>
@@ -55,6 +57,14 @@ const easy = index.filter((e) => e.install === "easy").length;
           <option value="any">Has an install guide ({installable.toLocaleString("en")})</option>
         </select>
       </div>
+      <div>
+        <label for="cloud">Cloud</label>
+        <select id="cloud" name="cloud" title="Whether a project makes the device work without the vendor's cloud">
+          <option value="">Any</option>
+          <option value="none">No cloud ({noCloud.toLocaleString("en")})</option>
+          <option value="setup-only">No cloud after setup ({setupOnly.toLocaleString("en")})</option>
+        </select>
+      </div>
     </form>
     <noscript><p class="muted small">Search and filters need JavaScript. Without it, the full list is in <a href="/api/index.json">/api/index.json</a>.</p></noscript>
     <div class="results-bar">
@@ -79,12 +89,8 @@ const easy = index.filter((e) => e.install === "easy").length;
   </script>
   <style>
     @media (min-width: 720px) {
-      #directory .filters { grid-template-columns: repeat(4, 1fr); }
+      #directory .filters { grid-template-columns: repeat(5, 1fr); }
       #directory .filters > :first-child { grid-column: 1 / -1; }
-    }
-    @media (min-width: 1024px) {
-      #directory .filters { grid-template-columns: 2fr repeat(4, 1fr); }
-      #directory .filters > :first-child { grid-column: auto; }
     }
   </style>
 </Base>

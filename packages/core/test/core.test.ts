@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { slugify, makeId, mergeRecords, search, toIndexEntry, lookup, effectiveStatus, type DeviceRecord } from "../src/index.ts";
+import { slugify, makeId, mergeRecords, search, toIndexEntry, lookup, effectiveStatus, validate, type DeviceRecord } from "../src/index.ts";
 
 const r = (o: Partial<DeviceRecord>): DeviceRecord => ({ id: "a/b", vendor: "A", model: "B", category: "other", status: "unknown", updated: "2026-01-01", ...o });
 
@@ -16,6 +16,33 @@ test("merge keeps furthest status and unions projects", () => {
   assert.equal(m.status, "open-firmware");
   assert.equal(m.projects!.length, 2);
   assert.deepEqual(m.provenance!.sources, ["openwrt"]);
+});
+
+test("merge keeps project freedom, curated first, filled from a duplicate", () => {
+  const p = { name: "x", url: "https://x", kind: "firmware" };
+  const curated = { nonfree: ["modem" as const], cloud: "none" as const };
+  const imported = { nonfree: ["vendor-blobs" as const], cloud: "none" as const };
+  assert.deepEqual(mergeRecords(r({ projects: [{ ...p, freedom: curated }] }), r({ projects: [{ ...p, freedom: imported }] })).projects, [{ ...p, freedom: curated }]);
+  assert.deepEqual(mergeRecords(r({ projects: [p] }), r({ projects: [{ ...p, freedom: imported }] })).projects, [{ ...p, freedom: imported }]);
+  assert.deepEqual(mergeRecords(r({ projects: [p] }), r({ projects: [p] })).projects, [p]);
+});
+
+test("index cloud is the least cloud dependency across projects", () => {
+  const p = (url: string, cloud?: any) => ({ name: url, url, kind: "firmware", ...(cloud ? { freedom: { cloud } } : {}) });
+  assert.equal(toIndexEntry(r({ projects: [p("a", "required"), p("b", "setup-only"), p("c")] })).cloud, "setup-only");
+  assert.equal(toIndexEntry(r({ projects: [p("a", "optional"), p("b", "none")] })).cloud, "none");
+  assert.equal("cloud" in toIndexEntry(r({ projects: [p("a", "unknown"), p("b")] })), false);
+  assert.equal("cloud" in toIndexEntry(r({})), false);
+});
+
+test("schema accepts freedom and rejects unknown values", () => {
+  const rec = (freedom: any) => r({ projects: [{ name: "x", url: "https://x.org", kind: "firmware", freedom }] });
+  assert.deepEqual(validate(rec({ nonfree: ["vendor-blobs", "modem"], cloud: "none", notes: "Blobs from stock." })), []);
+  assert.deepEqual(validate(rec({ nonfree: [] })), []);
+  assert.notDeepEqual(validate(rec({ nonfree: ["wifi", "wifi"] })), []);
+  assert.notDeepEqual(validate(rec({ nonfree: ["firmware"] })), []);
+  assert.notDeepEqual(validate(rec({ cloud: "sometimes" })), []);
+  assert.notDeepEqual(validate(rec({ cloud: "none", extra: true })), []);
 });
 
 test("live claim makes unknown in-progress, expired claim does not", () => {

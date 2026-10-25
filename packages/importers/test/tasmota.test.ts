@@ -73,6 +73,7 @@ test("tasmota page URL of a file name with a space (Jekyll slug)", () => {
   const r = tpl("tate_guard_TT-OTPW- STTIP", "title: Tate Guard STTIP\nflash: serial\ncategory: plug");
   assert.equal(r.projects![0].url, "https://templates.blakadder.com/tate_guard_TT-OTPW-STTIP.html");
   assert.equal(r.install![0].guide, r.projects![0].url);
+  assert.deepEqual(r.projects![0].freedom, { nonfree: ["wifi"], cloud: "none", notes: "The ESP Wi-Fi stack ships as a binary blob from Espressif" });
 });
 
 test("tasmota template Jekyll does not publish (blank line before the fence): general guide", () => {

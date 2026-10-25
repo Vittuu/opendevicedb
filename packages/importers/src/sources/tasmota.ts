@@ -1,7 +1,7 @@
 // Tasmota device templates (templates.blakadder.com), one markdown file with YAML
 // frontmatter per device in github.com/blakadder/templates/_templates.
 import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
-import { clean, frontmatter, githubFiles, githubRaw, mapLimit, splitTitle, type Source } from "../lib.ts";
+import { clean, frontmatter, githubFiles, githubRaw, espWifiFreedom, mapLimit, splitTitle, type Source } from "../lib.ts";
 
 const REPO = "blakadder/templates", BRANCH = "master";
 
@@ -135,7 +135,7 @@ export function fromTemplate(path: string, text: string, date = today()): Device
     category: tasmotaCategory(fm.category),
     identifiers: { chips: [tasmotaChip(fm), ...(module && module !== "solo1" ? [module] : module ? ["ESP32-SOLO1"] : [])] },
     status: "open-firmware",
-    projects: [{ name: "Tasmota", url, kind: "firmware", license: "GPL-3.0" }],
+    projects: [{ name: "Tasmota", url, kind: "firmware", license: "GPL-3.0", freedom: espWifiFreedom() }],
     // Jekyll only renders files that start with the "---" fence; the lenient parser also reads
     // a few that start with a blank line, whose page is never published: the route then links
     // the Tasmota getting-started guide instead.

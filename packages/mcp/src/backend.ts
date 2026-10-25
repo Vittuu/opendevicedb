@@ -81,6 +81,7 @@ function normalizeEntry(e: any): IndexEntry {
     status: e.status as Status, sources: e.sources ?? [], identifiers: e.identifiers ?? {},
     claims: e.claims ?? 0, verified: e.verified ?? false,
     ...(["easy", "medium", "hard"].includes(e.install) ? { install: e.install } : {}),
+    ...(["none", "setup-only", "optional", "required"].includes(e.cloud) ? { cloud: e.cloud } : {}),
     updated: e.updated ?? "",
   };
 }

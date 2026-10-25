@@ -101,6 +101,7 @@ test("ptp2 table → records; mode variants merge, PTP_CAP → controllable", ()
   assert.equal(d90.status, "controllable");
   assert.deepEqual(d90.identifiers, { usb: ["04b0:0421", "04b0:0422"] });
   assert.equal(d90.projects![0].url, "https://github.com/gphoto/libgphoto2/blob/master/camlibs/ptp2/library.c");
+  assert.deepEqual(d90.projects![0].freedom, { nonfree: ["device-firmware"], cloud: "none" });
   assert.equal(f.records[0].status, "partial-protocol");
   assert.equal(f.records[1].category, "action-camera");
   assert.deepEqual(f.records[1].identifiers!.usb, ["2672:000d"]);

@@ -14,6 +14,8 @@ so that nobody — human or AI agent — redoes work that already exists.
 - **Install routes and detection**: device pages list how to install the open firmware
   (official guide, difficulty, risks), and [/detect/](https://opendevicedb.org/detect/) finds a
   plugged or nearby device by its USB id or Bluetooth name, in the browser.
+- **Freedom**: each project says what stays non-free (vendor blobs, modem, Wi-Fi…) and whether the
+  vendor cloud is still needed; the directory filters devices that work with no cloud.
 - **Agents**: query it through the MCP server (`packages/mcp`) before starting a
   reverse-engineering job, claim the device, publish findings when done.
 - **Existing databases** (19 today: OpenWrt, Zigbee2MQTT, Z-Wave JS, Tasmota, ESPHome,

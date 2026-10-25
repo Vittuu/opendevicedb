@@ -95,6 +95,7 @@ test("rtl_433 decoder file → records", () => {
   assert.deepEqual(r.identifiers, { sku: ["606TX"] });
   assert.equal(r.projects![0].url, "https://github.com/merbanan/rtl_433/blob/master/src/devices/acurite.c");
   assert.equal(r.projects![0].license, "GPL-2.0-or-later");
+  assert.deepEqual(r.projects![0].freedom, { nonfree: ["device-firmware"], cloud: "none" });
   assert.deepEqual(r.provenance, { sources: ["rtl_433"] });
   assert.deepEqual(fromDecoderFile("include/r_device.h", FILE, D), []);
 });

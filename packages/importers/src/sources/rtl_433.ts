@@ -15,7 +15,7 @@
 // (their receiver is not driven), alarm systems, bidirectional devices, and decoders whose
 // own comment says the payload is undecoded or unconfirmed.
 import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
-import { clean, firstMatch, githubFiles, githubRaw, mapLimit, type Source } from "../lib.ts";
+import { clean, firstMatch, githubFiles, githubRaw, mapLimit, deviceFirmwareFreedom, type Source } from "../lib.ts";
 
 const REPO = "merbanan/rtl_433", BRANCH = "master";
 const DECODER_FILE = /^src\/devices\/[^/]+\.c$/;
@@ -489,7 +489,7 @@ export function fromDecoderFile(path: string, text: string, date = today()): Dev
         status,
         summary: `Radio protocol decoded by rtl_433 as "${d.name}".`,
         interfaces: [{ name: "433/868/915 MHz radio", transport: "rf", status: status === "controllable" ? "documented" : "partial", spec: url }],
-        projects: [{ name: `rtl_433 decoder ${file}`, url, kind: "driver", license: LICENSE }],
+        projects: [{ name: `rtl_433 decoder ${file}`, url, kind: "driver", license: LICENSE, freedom: deviceFirmwareFreedom() }],
         install: [{ ...RTL_433_INSTALL, tools: [...RTL_433_INSTALL.tools!] }],
         provenance: { sources: ["rtl_433"] },
         updated: date,

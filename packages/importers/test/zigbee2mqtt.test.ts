@@ -18,6 +18,7 @@ test("zigbee2mqtt install route: pairing, guided by the device's docs page", () 
   }]);
   // the guide is the docs page the record links to: its own for a fingerprinted white label, else the base model's
   assert.deepEqual(recs.map((r) => r.install![0].guide), recs.map((r) => r.projects![0].url));
+  for (const r of recs) assert.deepEqual(r.projects![0].freedom, { nonfree: ["device-firmware"], cloud: "none" });
   assert.equal(recs[1].install![0].guide, "https://www.zigbee2mqtt.io/devices/LED1546G12.html");
   assert.equal(recs[2].install![0].guide, "https://www.zigbee2mqtt.io/devices/LED1545G12.html");
   assert.equal(z2mInstall("ZNCZ02LM/ZNCZ03LM").guide, "https://www.zigbee2mqtt.io/devices/ZNCZ02LM_ZNCZ03LM.html");

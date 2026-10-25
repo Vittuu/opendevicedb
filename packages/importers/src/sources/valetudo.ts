@@ -7,7 +7,7 @@
 // vendor cloud and app with local control (web UI, REST, MQTT/Home Assistant). So the status is
 // controllable and the project kind is integration.
 import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
-import { clean, githubRaw, type Source } from "../lib.ts";
+import { clean, deviceFirmwareFreedom, githubRaw, type Source } from "../lib.ts";
 
 const REPO = "Hypfer/Valetudo", BRANCH = "master";
 const PAGE = "docs/pages/general/supported-robots.md";
@@ -130,6 +130,8 @@ export function valetudoInstall(r: Robot): InstallRoute[] {
   return out;
 }
 
+const VALETUDO_NOTE = "Valetudo replaces the vendor cloud on the rooted stock system";
+
 export function fromRobot(r: Robot, date = today()): DeviceRecord | null {
   const vendor = robotBrand(r.brand);
   const lower = r.heading.toLowerCase();
@@ -152,7 +154,7 @@ export function fromRobot(r: Robot, date = today()): DeviceRecord | null {
     status: "controllable",
     summary: facts.length ? `Rooted, then runs Valetudo for cloud-free local control. ${facts.join(" ")}` : undefined,
     projects: [
-      { name: "Valetudo", url: `${PAGE_URL}#${r.anchor}`, kind: "integration", license: "Apache-2.0" },
+      { name: "Valetudo", url: `${PAGE_URL}#${r.anchor}`, kind: "integration", license: "Apache-2.0", freedom: deviceFirmwareFreedom(VALETUDO_NOTE) },
       ...r.rooting.map((l) => ({ name: `Valetudo rooting instructions (${l.name})`, url: l.url, kind: "other" as const })),
     ],
     install: valetudoInstall(r),

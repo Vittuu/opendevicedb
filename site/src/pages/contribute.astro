@@ -45,6 +45,14 @@ const installExample = `install:
     revert: https://example.org/back-to-stock
     firmware_constraints: Units sold after mid-2023 ship another chip and cannot be flashed this way
     notes: Hold the button while plugging in the cable.`;
+const freedomExample = `projects:
+  - name: LineageOS 22.2
+    url: https://wiki.lineageos.org/devices/bluejay/
+    kind: firmware
+    freedom:
+      nonfree: [vendor-blobs, modem, gpu]   # device-firmware, wifi, bluetooth, camera, sensors, bootloader, other; [] = nothing known
+      cloud: none                           # setup-only, optional, required, unknown
+      notes: Proprietary files are extracted from the stock firmware`;
 const reportFormUrl = `${ODB_REPO_URL}/issues/new?template=${REPORT_TEMPLATE}`;
 const themes = { light: "github-light", dark: "github-dark" } as const;
 ---
@@ -125,6 +133,17 @@ const themes = { light: "github-light", dark: "github-dark" } as const;
       <a href="/api/install-reports.json"><code>/api/install-reports.json</code></a>. They never change a record:
       a maintainer may turn a report into a <code>manual</code> verification entry by hand.
     </p>
+
+    <h2 id="freedom">Freedom: what stays non-free</h2>
+    <p>
+      Running a free OS or firmware does not make a device fully free. Each project can say, under <code>freedom</code>,
+      what still needs proprietary code once it is in use (<code>nonfree</code>) and whether the device still needs the
+      vendor's cloud (<code>cloud</code>). Take the values from the project's own documentation, never guess:
+      leave <code>freedom</code> out when you don't know, and write <code>nonfree: []</code> only when nothing non-free
+      is known to remain. Device pages show it next to each project, and the directory's "No cloud" filter uses it.
+    </p>
+    <Code code={freedomExample} lang="yaml" themes={themes} />
+    <p class="small muted">The values above illustrate the format. Imported sources set only what holds for every device they list (e.g. Zigbee2MQTT: the stock firmware stays, no cloud); a curated record refines it per device.</p>
 
     <h2 id="verification">Verification levels</h2>
     <p>

@@ -209,3 +209,11 @@ a.counter:hover { border-color: var(--muted); }
 .badge.inst-easy { --st: var(--st-open-firmware); }
 .badge.inst-medium { --st: var(--st-in-progress); }
 .badge.inst-hard { --st: var(--muted); }
+
+/* project freedom (device page; SPEC "Freedom") */
+.badge.cloud-none { --st: var(--st-open-firmware); }
+.badge.cloud-setup-only { --st: var(--st-in-progress); }
+.badge.cloud-optional, .badge.cloud-required, .badge.cloud-unknown { --st: var(--muted); }
+.freedom .badge { font-size: 0.78rem; }
+.legend { margin-top: 10px; }
+.legend summary { cursor: pointer; }

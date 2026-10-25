@@ -104,7 +104,8 @@ test("robot → record", () => {
     category: "vacuum-robot", identifiers: { sku: ["STYTJ01ZHM"] }, status: "controllable",
     summary: "Rooted, then runs Valetudo for cloud-free local control. Made by Dreame. Valetudo binary: armv7. Secure boot: no.",
     projects: [
-      { name: "Valetudo", url: "https://valetudo.cloud/pages/general/supported-robots/#xiaomi-1c", kind: "integration", license: "Apache-2.0" },
+      { name: "Valetudo", url: "https://valetudo.cloud/pages/general/supported-robots/#xiaomi-1c", kind: "integration", license: "Apache-2.0",
+        freedom: { nonfree: ["device-firmware"], cloud: "none", notes: "Valetudo replaces the vendor cloud on the rooted stock system" } },
       { name: "Valetudo rooting instructions (UART)", url: "https://valetudo.cloud/pages/installation/dreame/#uart-shell", kind: "other" },
       { name: "Valetudo rooting instructions (Init override (may be patched))", url: "https://gist.github.com/x/y", kind: "other" },
     ],

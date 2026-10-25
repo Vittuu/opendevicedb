@@ -8,7 +8,7 @@
 // lists elsewhere and is followed by a model code ("goldair_gpcv405_heater"), else they
 // are skipped (no "Generic" records). Category from the device name, then the primary entity.
 import YAML from "yaml";
-import { makeId, today, type DeviceRecord, type InstallRoute } from "@opendevicedb/core";
+import { makeId, today, type DeviceRecord, type Freedom, type InstallRoute } from "@opendevicedb/core";
 import { clean, firstMatch, githubFiles, githubRaw, mapLimit, type Source } from "../lib.ts";
 
 const REPO = "make-all/tuya-local", BRANCH = "main";
@@ -146,6 +146,11 @@ export const TUYA_LOCAL_INSTALL: InstallRoute = {
 
 const fileUrl = (file: string) => `https://github.com/${REPO}/blob/${BRANCH}/${DIR}${encodeURIComponent(file)}`;
 
+// SPEC "Freedom": the stock firmware stays; the local key usually comes from a Tuya account, once.
+const tuyaFreedom = (): Freedom => ({
+  nonfree: ["device-firmware"], cloud: "setup-only", notes: "The local key is usually obtained once through a Tuya account",
+});
+
 /** Records of one config (one per product and brand). `brands` comes from brandSpellings. */
 export function fromConfig(c: TuyaConfig, brands: Map<string, string>, date = today()): DeviceRecord[] {
   const byFile = fromFileName(c.file, brands);
@@ -174,7 +179,7 @@ export function fromConfig(c: TuyaConfig, brands: Map<string, string>, date = to
         identifiers: { sku: [...(p.model_id && p.model_id !== m ? [p.model_id] : []), ...(p.id ? [`tuya:${p.id}`] : [])] },
         status: "controllable",
         summary: `${name}, controlled locally over the Tuya protocol by tuya-local (stock firmware, no cloud).`,
-        projects: [{ name: "tuya-local", url: fileUrl(c.file), kind: "integration", license: "MIT" }],
+        projects: [{ name: "tuya-local", url: fileUrl(c.file), kind: "integration", license: "MIT", freedom: tuyaFreedom() }],
         install: [{ ...TUYA_LOCAL_INSTALL, tools: [...TUYA_LOCAL_INSTALL.tools!] }],
         provenance: { sources: ["tuya-local"] },
         updated: date,

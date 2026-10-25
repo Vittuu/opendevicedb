@@ -91,6 +91,10 @@ test("device yaml → record", () => {
   assert.ok(s9.aliases!.includes("starlte"));
   assert.equal(s9.projects![0].name, "LineageOS, discontinued after 20 (starlte)");
   assert.equal(s9.projects![0].url, "https://wiki.lineageos.org/devices/starlte/");
+  assert.deepEqual(s9.projects![0].freedom, {
+    nonfree: ["vendor-blobs"], cloud: "none",
+    notes: "LineageOS uses proprietary files extracted from the stock firmware (modem, camera, GPU…)",
+  });
   assert.deepEqual(s9.provenance, { sources: ["lineageos"] });
 
   const p6a = fromDevice(parseDeviceYaml(BLUEJAY), D)!;

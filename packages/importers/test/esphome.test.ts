@@ -68,6 +68,14 @@ test("esphome web installer only for ESP chips", () => {
   assert.equal(esphomeInstall({ type: "misc", difficulty: 3 }, G, [], "Thing")[0].installer, undefined, "unknown chip: no installer");
 });
 
+test("esphome freedom: the closed Wi-Fi blob only for ESP chips", () => {
+  const dev = (board: string) => fromDevice("src/docs/devices/X-Plug/index.md", `---\ntitle: Acme X Plug\ntype: plug\nboard: ${board}\n---\n`, D)!;
+  assert.deepEqual(dev("esp8266").projects![0].freedom, { nonfree: ["wifi"], cloud: "none", notes: "The ESP Wi-Fi stack ships as a binary blob from Espressif" });
+  assert.equal(dev("bk72xx").projects![0].freedom, undefined);
+  assert.equal(dev("esp32, RP2040").projects![0].freedom, undefined);
+  assert.equal(dev("").projects![0].freedom, undefined, "unknown chip: unknown");
+});
+
 test("esphome plug-n-flash: over the air for Tuya devices, USB for boards, else the page's steps", () => {
   const cc = fromDevice("src/docs/devices/Status-Wifi-Plug/index.md", "---\ntitle: Status Wifi Plug\ntype: plug\nboard: bk72xx\ndifficulty: 2\n---\nFlash with tuya-cloudcutter.", D)!;
   assert.deepEqual(validate(cc), []);

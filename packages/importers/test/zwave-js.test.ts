@@ -76,6 +76,7 @@ test("zwave-js device file → record", () => {
   assert.deepEqual(r.identifiers!.sku, ["YRL226", "YRL256", "zwave:0x0129:0x8002:0x0600"]);
   assert.deepEqual(r.aliases, ["Yale YRL256", "Yale Assure Key Free Lever Touchscreen"]);
   assert.equal(r.projects![0].url, "https://github.com/zwave-js/zwave-js/blob/master/packages/config/config/devices/0x0129/yrl226.json");
+  assert.deepEqual(r.projects![0].freedom, { nonfree: ["device-firmware"], cloud: "none" });
   assert.deepEqual(r.provenance, { sources: ["zwave-js"] });
 });
 

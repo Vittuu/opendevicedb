@@ -144,6 +144,29 @@ Accounts, comments, a write API, hosting of binaries, automatic verification.
   Archive for binaries, Software Heritage for source). Needs a legal review before
   anything is seeded. (Owner, 2026-10-17.)
 
+## Freedom: what stays non-free or cloud-bound (2026-10-25)
+
+**Why.** "Runs a free OS" is not "fully free". FSFE (Upcycling Android) asked for clear
+information on remaining proprietary components and cloud dependencies; we promised it.
+
+**Data.** Each entry in `projects` may carry a `freedom` object, describing the device *once
+that project is in use*:
+
+| field | meaning |
+|---|---|
+| `nonfree` | components that still need proprietary code: `vendor-blobs` (files extracted from the stock firmware, e.g. LineageOS), `device-firmware` (the stock firmware stays, the project only talks to it), `modem`, `gpu`, `wifi`, `bluetooth`, `camera`, `sensors`, `bootloader`, `other`. `[]` means nothing non-free is known to remain; absent means unknown. |
+| `cloud` | `none` (works fully locally), `setup-only` (a vendor account is needed once, e.g. to obtain a local key), `optional`, `required`, `unknown` |
+| `notes` | one sentence, plain text |
+
+Values come from the project's own documentation, never guessed. Importers set only what is
+true for every device of that source (e.g. Zigbee2MQTT: `device-firmware`, cloud `none`);
+curated records refine per device. `IndexEntry` gains `cloud` (the best value across
+projects, `none` first) so the directory can filter "works without the cloud".
+
+**Site.** On the device page, each project shows "Still non-free: …" and "Cloud: …", with a
+short legend; the directory gets a "No cloud" filter. Same data in the JSON API and in the MCP
+`lookup_device` answer.
+
 ## R1 — Guided installer (agreed and built 2026-10-17)
 
 **Goal.** On a device page, someone who does not code sees in 30 seconds whether there is a
