@@ -1,0 +1,38 @@
+id: huawei/alp-l29
+vendor: HUAWEI
+model: ALP-L29
+aliases: [Mate 10, Huawei Mate 10]
+category: phone
+identifiers:
+  usb: ["12d1:107e"]
+  chips: [Kirin 970]
+status: open-firmware
+vendor_support: discontinued
+summary: >-
+  Huawei Mate 10 (Kirin 970, 2017). It shipped with Project Treble, so once the bootloader is
+  unlocked it runs generic system images (GSIs): Android 9 GSIs work well on an EMUI 9 base,
+  newer ones lose the camera and mobile data. The hard part is the unlock: Huawei stopped
+  issuing codes in 2018 and there is no free, open-source unlock for the Kirin 970.
+install:
+  - project: phh Treble GSI
+    method: usb-bootloader
+    guide: https://github.com/phhusson/treble_experimentations/wiki/Huawei-Mate-10
+    difficulty: hard
+    tools: [USB cable, a bootloader unlock (paid HCU Client or DC-Unlocker; Kirin-Tool on EMUI 9.1 or older)]
+    opens_device: false
+    mains_powered: false
+    brick_risk: medium
+    reversible: partial
+    firmware_constraints: >-
+      No open-source unlock: PotatoNV does not support the Kirin 970. Use an EMUI 9 base;
+      Android 12 GSIs lose the camera and mobile data.
+projects:
+  - name: phh Treble GSI
+    url: https://github.com/phhusson/treble_experimentations/wiki/Huawei-Mate-10
+    kind: firmware
+    license: Apache-2.0
+provenance:
+  sources: [curated, "https://github.com/opendevicedb/opendevicedb/issues/1"]
+  ai_assisted: true
+  tools: [claude-code]
+updated: 2026-10-25
