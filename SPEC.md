@@ -32,6 +32,8 @@ One open directory, keyed by device model, that:
 - **P2 — Aggregate, don't duplicate.** Importers snapshot external databases into
   `data/imported/<source>.json` (slim records + link back). Curated files override
   and enrich imported records for the same device id.
+  Devices that only speak a standard, published protocol (MTP, eSCL/AirScan, PostScript/PCL)
+  are left out of imports: nothing about them needed reverse engineering.
 - **P3 — Claims prevent duplicate work.** A `claims` entry says "someone is working on
   this, scope X, until date Y, contact Z". Claims expire; an expired claim is ignored.
 - **P4 — AI output is not trusted by default.** Every interface carries a `confidence`

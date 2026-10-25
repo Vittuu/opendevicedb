@@ -18,6 +18,10 @@ import rockbox from "./sources/rockbox.ts";
 import gadgetbridge from "./sources/gadgetbridge.ts";
 import valetudo from "./sources/valetudo.ts";
 import cloudcutter from "./sources/cloudcutter.ts";
+import qmk from "./sources/qmk.ts";
+import sane from "./sources/sane.ts";
+import openprinting from "./sources/openprinting.ts";
+import libwacom from "./sources/libwacom.ts";
 import type { Source } from "./lib.ts";
 
 export * from "./lib.ts";
@@ -26,5 +30,5 @@ export * from "./lib.ts";
 export const SOURCES: Source[] = [
   zigbee2mqtt, openwrt, tasmota, esphome, thingino,
   zwaveJs, tuyaLocal, openrgb, libgphoto2, lineageos, postmarketos, coreboot, rtl433, marlin, klipper, rockbox,
-  gadgetbridge, valetudo, cloudcutter,
+  gadgetbridge, valetudo, cloudcutter, qmk, sane, openprinting, libwacom,
 ];
