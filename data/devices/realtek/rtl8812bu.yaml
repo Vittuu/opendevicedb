@@ -77,6 +77,12 @@ summary: Realtek's common 802.11ac dual-band USB Wi-Fi chip, found in many "AC12
   (TP-Link Archer T3U/T4U, ASUS USB-AC55/AC58, D-Link DWA-181/182/183, Edimax, Netgear A6150, Mercusys
   MA30H…). The RTL8822BU variant adds Bluetooth. Driven by the mainline Linux rtw88 driver since Linux
   6.2 (6.12 or later recommended); the chip loads a Realtek firmware file shipped in linux-firmware.
+  No free replacement firmware exists yet. Writing one is possible in principle (as done before for Atheros
+  open-ath9k-htc-firmware, Broadcom OpenFWWF) but nobody has started. The radio hardware is
+  undocumented, and the firmware licence (LICENCE.rtlwifi_firmware.txt) forbids disassembling it, so a
+  project would have to work clean-room from the open drivers (rtw88, Realtek's GPL vendor drivers) and
+  from observing the chip, keep regulatory radio limits, and get legal advice first. Claim it here if
+  you start.
 interfaces:
 - name: Wi-Fi (802.11ac) over USB
   transport: usb
@@ -107,6 +113,8 @@ projects:
     - device-firmware
     cloud: none
     notes: The driver is free; the chip runs Realtek firmware (rtw88/rtw8822b_fw.bin) loaded from linux-firmware.
+      No free replacement firmware exists; its licence forbids disassembly, so one would have to be written
+      clean-room from the open drivers.
 - name: morrownr 88x2bu (out-of-tree, old kernels)
   url: https://github.com/morrownr/88x2bu-20210702
   kind: driver

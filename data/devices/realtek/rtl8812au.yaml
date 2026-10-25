@@ -50,6 +50,12 @@ summary: Older Realtek 802.11ac dual-band USB Wi-Fi chip (AC1200), in many USB 3
   D-Link, ASUS, Netgear, Edimax, Belkin, TRENDnet and others. Driven by the mainline Linux rtw88 driver
   since Linux 6.13 (automatic detection of all USB ids from 6.14); the chip loads a Realtek firmware file
   shipped in linux-firmware.
+  No free replacement firmware exists yet. Writing one is possible in principle (as done before for Atheros
+  open-ath9k-htc-firmware, Broadcom OpenFWWF) but nobody has started. The radio hardware is
+  undocumented, and the firmware licence (LICENCE.rtlwifi_firmware.txt) forbids disassembling it, so a
+  project would have to work clean-room from the open drivers (rtw88, Realtek's GPL vendor drivers) and
+  from observing the chip, keep regulatory radio limits, and get legal advice first. Claim it here if
+  you start.
 interfaces:
 - name: Wi-Fi (802.11ac) over USB
   transport: usb
@@ -80,6 +86,8 @@ projects:
     - device-firmware
     cloud: none
     notes: The driver is free; the chip runs Realtek firmware (rtw88/rtw8812a_fw.bin) loaded from linux-firmware.
+      No free replacement firmware exists; its licence forbids disassembly, so one would have to be written
+      clean-room from the open drivers.
 - name: morrownr USB-WiFi guide
   url: https://github.com/morrownr/USB-WiFi
   kind: other
