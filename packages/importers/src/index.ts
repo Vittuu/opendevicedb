@@ -22,6 +22,8 @@ import qmk from "./sources/qmk.ts";
 import sane from "./sources/sane.ts";
 import openprinting from "./sources/openprinting.ts";
 import libwacom from "./sources/libwacom.ts";
+import betaflight from "./sources/betaflight.ts";
+import edgetx from "./sources/edgetx.ts";
 import type { Source } from "./lib.ts";
 
 export * from "./lib.ts";
@@ -30,5 +32,5 @@ export * from "./lib.ts";
 export const SOURCES: Source[] = [
   zigbee2mqtt, openwrt, tasmota, esphome, thingino,
   zwaveJs, tuyaLocal, openrgb, libgphoto2, lineageos, postmarketos, coreboot, rtl433, marlin, klipper, rockbox,
-  gadgetbridge, valetudo, cloudcutter, qmk, sane, openprinting, libwacom,
+  gadgetbridge, valetudo, cloudcutter, qmk, sane, openprinting, libwacom, betaflight, edgetx,
 ];
